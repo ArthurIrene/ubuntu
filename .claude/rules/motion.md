@@ -5,6 +5,8 @@ site is drawn and how it moves. Scenes redraw as line art, dividers are running
 stitches, hovers are stitches sewing themselves. The site should feel drawn by
 the same hand that stitches the garments.
 
+## The four laws
+
 1. **Vertical only.** Elements enter by rising. Nothing slides sideways.
 2. **Animate once, then rest.** No loops, no idling. One exception: the
    running-stitch divider.
@@ -12,11 +14,11 @@ the same hand that stitches the garments.
    belong to, never before.
 4. **One thread at a time.** Never animate three things simultaneously.
 
-Every animation honours `prefers-reduced-motion`. Reduced motion gets the
-finished state, not a broken one.
-
 The four laws above govern everything below. Where a moment here
 conflicts with a law, the law wins.
+
+Every animation honours `prefers-reduced-motion`. Reduced motion gets the
+finished state, not a broken one.
 
 ## Technical constraints
 
@@ -43,10 +45,10 @@ dot lands. About 2s. It then rises into the header position as the page lifts in
 - Plays **once per session** (sessionStorage flag, not localStorage).
 - **Any tap, scroll, key, or click skips it immediately** to the finished state.
 - Reduced motion: finished signature, simple fade.
-- Optional, pending founder confirmation: the final dot lands in `--wine`. Behind
+- Optional, pending founder confirmation: the final dot lands in `--color-wine`. Behind
   a flag; off until confirmed.
 
-**2. Page transitions.** One persistent nav stitch in `--wine` that never blinks
+**2. Page transitions.** One persistent nav stitch in `--color-wine` that never blinks
 out — it sews itself between nav items as the user navigates. One thread moving
 through the whole site.
 

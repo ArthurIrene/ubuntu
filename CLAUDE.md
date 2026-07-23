@@ -91,16 +91,16 @@ network**, which is why the resize happens where it does.
 Defined once as CSS variables. Never hard-code a hex value in a component.
 
 ```css
---cream:  #F5F0E8;  /* canvas — page background, behind every photo */
---ink:    #1A1208;  /* text, header, drawn lines */
---wine:   #4E2728;  /* thread — underlines, borders, the stitch */
---hill:   #3D5A3E;  /* cloth */
---tan:    #E8C49A;  /* cloth */
---udongo: #C49A6C;  /* cloth */
+--color-cream:  #F5F0E8;  /* canvas — page background, behind every photo */
+--color-ink:    #1A1208;  /* text, header, drawn lines */
+--color-wine:   #4E2728;  /* thread — underlines, borders, the stitch */
+--color-hill:   #3D5A3E;  /* cloth */
+--color-tan:    #E8C49A;  /* cloth */
+--color-udongo: #C49A6C;  /* cloth */
 ```
 
 **The colour law — do not break it.** Strong colour and garment photos never
-share a section. Any section containing a product photo is on `--cream`. The
+share a section. Any section containing a product photo is on `--color-cream`. The
 three cloth colours are only for sections with no garment in them. The clothes
 must always be the highest-contrast thing on the page.
 
