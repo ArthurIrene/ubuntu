@@ -1,11 +1,3 @@
----
-paths:
-  - "src/content/**"
-  - "src/app/**/page.tsx"
-  - "src/components/**/*form*"
-  - "src/lib/email*"
----
-
 # Copy
 
 Every string a customer reads. Placeholder text, button labels, error messages,

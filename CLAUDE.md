@@ -110,17 +110,7 @@ text, never headings.
 
 ## Motion laws
 
-Detail lives in `.claude/rules/motion.md`. These four govern everything:
-
-1. **Vertical only.** Elements enter by rising. Nothing slides sideways.
-2. **Animate once, then rest.** No loops, no idling. One exception: the
-   running-stitch divider.
-3. **Cloth follows the line.** Colour and images settle after the heading they
-   belong to, never before.
-4. **One thread at a time.** Never animate three things simultaneously.
-
-Every animation honours `prefers-reduced-motion`. Reduced motion gets the
-finished state, not a broken one.
+The four laws and all motion detail live in `.claude/rules/motion.md`.
 
 ## Conventions
 

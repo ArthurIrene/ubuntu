@@ -1,10 +1,3 @@
----
-paths:
-  - "src/motion/**"
-  - "src/styles/**/*.css"
-  - "src/components/**/*.tsx"
----
-
 # Motion
 
 The single-line embroidery is not just photographed on the site — it is how the
@@ -12,7 +5,17 @@ site is drawn and how it moves. Scenes redraw as line art, dividers are running
 stitches, hovers are stitches sewing themselves. The site should feel drawn by
 the same hand that stitches the garments.
 
-The four laws in `CLAUDE.md` govern everything below. Where a moment here
+1. **Vertical only.** Elements enter by rising. Nothing slides sideways.
+2. **Animate once, then rest.** No loops, no idling. One exception: the
+   running-stitch divider.
+3. **Cloth follows the line.** Colour and images settle after the heading they
+   belong to, never before.
+4. **One thread at a time.** Never animate three things simultaneously.
+
+Every animation honours `prefers-reduced-motion`. Reduced motion gets the
+finished state, not a broken one.
+
+The four laws above govern everything below. Where a moment here
 conflicts with a law, the law wins.
 
 ## Technical constraints
