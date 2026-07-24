@@ -43,10 +43,9 @@ describe("isGated", () => {
 		expect(isGated("/dashboard/orders")).toBe(false);
 	});
 
-	it("never gates the api, the holding page, or Next internals", () => {
+	it("never gates the api or Next internals", () => {
 		expect(isGated("/api")).toBe(false);
 		expect(isGated("/api/upload")).toBe(false);
-		expect(isGated("/holding")).toBe(false);
 		expect(isGated("/_next")).toBe(false);
 		expect(isGated("/_next/data/build/x.json")).toBe(false);
 	});

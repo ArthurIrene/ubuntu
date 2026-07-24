@@ -12,20 +12,21 @@ export function isOpen(value: string | undefined): boolean {
 	return value === "open";
 }
 
-// Path prefixes that are never gated. A prefix matches a path that equals it
-// exactly or continues with a "/", so "/o" and "/o/<token>" are exempt while
-// "/optional" is not.
+// Path prefixes that are never gated, and never localed — the tree outside
+// [locale]. A prefix matches a path that equals it exactly or continues with a
+// "/", so "/o" and "/o/<token>" are exempt while "/optional" is not.
 const UNGATED_PREFIXES = [
-	"/dashboard", // the founder's dashboard, off the public tree
+	"/dashboard", // the founder's dashboard, off the public tree, one language
 	"/o", //         order links — a real token reaches its page open or shut
 	"/api", //       route handlers
-	"/holding", //   what the gate itself serves; gating it would loop
 	"/_next", //     Next internals
 ];
 
 /**
- * True for the public tree — the pages the gate covers. False for the
- * dashboard, order links, the API, the holding page and Next internals.
+ * True for the public tree — the pages the gate covers, which includes both
+ * locale roots ("/" and "/rw"). False for the dashboard, order links, the API
+ * and Next internals. The holding page now lives under [locale] and is reached
+ * by rewrite, not by being exempt here.
  *
  * `/o/<token>` must never be gated: a customer holding a real order link
  * reaches it whether the site is open or shut.
