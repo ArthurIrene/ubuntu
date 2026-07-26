@@ -10,11 +10,11 @@ behind a decision. Do not import it — it is reference, not session context.
 ## Commands
 
 ```
-pnpm dev        # local dev server
-pnpm build      # next build
-pnpm preview    # opennextjs-cloudflare build && preview  (production-like, local)
-pnpm deploy     # opennextjs-cloudflare build && deploy
-pnpm size       # check worker bundle against the 3 MiB limit
+pnpm dev          # local dev server
+pnpm build        # next build
+pnpm preview      # opennextjs-cloudflare build && preview  (production-like, local)
+pnpm deploy       # opennextjs-cloudflare build && deploy
+pnpm check:bundle # check worker bundle against the 3 MiB limit
 ```
 
 Run `pnpm preview`, not just `pnpm dev`, before saying a change works. Several
@@ -38,7 +38,8 @@ Pre-revenue. Everything runs on free tiers until the first sale.
 - **Never add a paid service or a dependency with a cost.** If a task seems to
   need one, stop and say so instead of adding it.
 - **Worker bundle stays under 3 MiB gzipped** (Cloudflare free plan). Run
-  `pnpm size` before any deploy. Prefer a hand-written 40 lines to a 200 KB package.
+  `pnpm check:bundle` before any deploy. Prefer a hand-written 40 lines to a
+  200 KB package.
 - **10ms CPU per request** on the free plan. No server-side image processing, no
   heavy computation in a request. `sharp` does not run in the Workers runtime at all.
 - **No animation libraries.** No GSAP, Framer Motion, Lottie, anime.js. Motion is
