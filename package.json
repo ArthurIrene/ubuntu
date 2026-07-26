@@ -6,6 +6,7 @@
 		"dev": "next dev",
 		"build": "next build",
 		"test": "vitest run",
+		"check:bundle": "node scripts/check-bundle-size.mjs",
 		"start": "next start",
 		"lint": "next lint",
 		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
