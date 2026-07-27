@@ -22,6 +22,18 @@ It never explains itself twice and never apologises for what it is.
 The personality is *the rebel artisan*: crafted, charming, generous, quietly
 confident. Never loud, never pleading.
 
+**Two pillars, one voice** *(Round 17)*. The brand stands on *ubuntu* — a person is a
+person through other persons — and, beside it, on **saving what would be wasted and
+making it good.** Some pieces are **reborn**: cloth on its way to the bin, remade into
+something worth keeping. Both pillars are the same warmth in the same voice; the
+second is not an eco-badge bolted on. Say the saving plainly and let the finished
+piece prove the worth — *this cloth had one life and begins another* is the register,
+never "sustainable", "eco-friendly", "planet-saving", or a recycling symbol. Green
+virtue-signalling is distance language by another name; it is on the never-write list
+below in spirit. The rescuing is told in the story and in marketing, **never as a
+feature on the product page** — a reborn piece is shown as his work, like all his
+work.
+
 **Never write:**
 - Exclamation marks
 - Scarcity — "only 2 left", "hurry", countdowns
@@ -29,6 +41,8 @@ confident. Never loud, never pleading.
 - Distance language — "inspired by Africa", "African-inspired", "ethnic", "tribal"
 - Marketing filler — "amazing", "stunning", "must-have"
 - Fake social proof, invented counts, claims of being bigger than it is
+- Eco-badge language — "sustainable", "eco-friendly", "green", "planet-saving",
+  recycling symbols. Say the saving plainly *(Round 17)*; do not label it.
 
 **Specificity rule:** cultural references are always named and explained — a
 particular scene, tradition, or place. Never generic "African wisdom." If the
@@ -40,6 +54,8 @@ reference cannot be named precisely, do not gesture at one.
 - Commissions are **"Only yours."** Never "custom", never "bespoke".
 - The process page is **"The making."**
 - Say: **maker**, **stitched**, **scene**, **piece**, **cloth**, **thread**.
+- A piece made from saved cloth is **reborn** *(Round 17)* — the code word and the
+  customer word are the same. Never "upcycled", "recycled", "repurposed", or "eco".
 - Avoid: **product**, **item**, **SKU**, **merch**.
 - **Never "drop."** A drop implies the thing goes away, and nothing here does. Say
   **newly stitched**, or *the latest*.
