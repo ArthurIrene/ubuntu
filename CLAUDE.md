@@ -4,7 +4,7 @@ Hand-embroidered clothing brand, Kigali. Made-to-order: nothing is stocked, ever
 piece is stitched after it is asked for. The site is a small app — public pages,
 an order system with private status pages, and an admin dashboard for the founder.
 
-Full brand and content plan: `docs/foundation.md`. Read it when you need intent
+Planning docs, for intent behind a decision: `docs/ubuntu-foundation.md` (brand and content), `docs/ubuntu-decisions.md` (every decision round), `docs/ubuntu-technical.md` (architecture), `docs/ubuntu-copy.md` (voice and strings). Read when you need the reasoning
 behind a decision. Do not import it — it is reference, not session context.
 
 ## Commands
