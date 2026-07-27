@@ -964,6 +964,56 @@ story. Decided before the schema, which is the only time the boolean is free.*
 
 ---
 
+## Round 18 — The middleware file stays named middleware (not proxy)
+
+*A deprecation warning that must not be obeyed. Next 16 renamed the `middleware.ts`
+file convention to `proxy.ts` and prints a notice about it on every build. The rename
+looks like a two-line chore and is not one — it is a runtime change wearing a
+filename's clothes. The R16 test applied to a dependency rather than a feature: the
+thing is designed for and not yet taken, because the platform underneath cannot host
+what it produces.*
+
+- **The warning is real, and the rename is refused anyway.** `next build` prints *"The
+  `middleware` file convention is deprecated. Please use `proxy` instead"* every run.
+  The migration itself is genuinely small — rename the file, rename the exported
+  function `middleware` → `proxy`, leave `config` and its `matcher` untouched, which is
+  all Next's own codemod does. **We are not taking it.**
+- **Because it is not behaviour-neutral.** A proxy file is forced onto the **Node.js
+  runtime**, unconditionally, and Next's build refuses any override — *"Proxy always
+  runs on Node.js runtime."* `middleware.ts` compiles to the **edge runtime**. The
+  filename is the runtime selector, which is the part the word "rename" hides. Visible
+  in the build output: as `middleware.ts` the edge entry sits in
+  `middleware-manifest.json`; as `proxy.ts` it moves to `functions-config-manifest.json`
+  as `/_middleware` with `runtime: nodejs`.
+- **And Cloudflare cannot host the Node one.** `@opennextjs/cloudflare` hard-errors:
+  *"Node.js middleware is not currently supported. Consider switching to Edge
+  Middleware."* Checked against the **latest** adapter (1.20.2), not only the installed
+  one — no released version supports it. Upstream: `opennextjs-cloudflare#962` and
+  `workers-sdk#13755`.
+- **So the deprecated name is the only one that produces a deployable Worker.** Taking
+  the rename trades a cosmetic build warning for a site that does not deploy. Confirmed
+  end to end: under `proxy.ts`, `pnpm build` succeeds and all tests pass — and then
+  `opennextjs-cloudflare build` fails, so there is no Worker to preview. The failure is
+  after the point where a careless run would call it done.
+- **The warning is expected, and seeing it is not a bug to fix.** This is the line that
+  matters, because the build output is instructing the next person to do the thing that
+  breaks the deploy. Ignore it until the trigger below fires.
+
+**Revisit trigger:** when `@opennextjs/cloudflare` ships Node-proxy support — watch
+`opennextjs-cloudflare#962`. Only then is the rename safe, and even then it is not
+automatic. The exported function must be renamed with the file, and `pnpm preview`
+must confirm on the Workers runtime that the gate and the locale routing still run
+under the new name: shut, `/` and `/rw` each serving their own holding page, and an
+order link passing through ungated.
+
+*The named cost: the build prints a deprecation warning on every run until upstream
+moves, and a warning everyone is told to ignore is a warning nobody reads — the next
+real one hides inside it. That is accepted, because the alternative is a Worker that
+does not build. It is also the reason this is a round in writing rather than a comment
+in the file nobody opens.*
+
+---
+
 # PART THREE — WHAT REMAINS
 
 ## Rounds
