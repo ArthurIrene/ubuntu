@@ -12,30 +12,13 @@
 // exactly like ordinary attrition.
 
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 
 import { getDb, schema } from "@/db/client";
 import { orderEmail, whatsappDraft, type EmailKey, type OrderEmailVars } from "@/emails/order";
 import { email as mailer } from "@/lib/email";
 import { messageNote } from "@/lib/order-state";
+import { orderLink } from "@/lib/origin";
 import type { Locale } from "@/lib/locale";
-
-/**
- * The order page a customer reaches.
- *
- * **The token is the credential.** This function is the only place that
- * composes the URL, and its result goes into an email body or a `wa.me` draft
- * and nowhere else — never a log, never an error, never a dashboard screen
- * *(R5, R12d)*.
- */
-async function orderLink(token: string): Promise<string> {
-	const header = await headers();
-	const host = header.get("host") ?? "localhost:3000";
-	const proto = (header.get("x-forwarded-proto") ?? "").split(",")[0].trim();
-	const scheme =
-		proto || (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
-	return `${scheme}://${host}/o/${token}`;
-}
 
 /** Everything an email needs about an order, in one read. */
 async function load(orderId: string) {

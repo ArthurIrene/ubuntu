@@ -17,6 +17,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDb, schema } from "@/db/client";
+import { siteOrigin } from "@/lib/origin";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -567,23 +568,6 @@ export const auth: Auth = {
 		await auth.signOut();
 	},
 };
-
-/**
- * The origin the magic link points at, taken from the request rather than
- * configured.
- *
- * A configured origin is one more value to get wrong, and getting it wrong
- * sends the login link for the deployed site to `localhost`. The request
- * already knows where it came from.
- */
-async function siteOrigin(): Promise<string> {
-	const header = await headers();
-	const host = header.get("host") ?? "localhost:3000";
-	const proto = (header.get("x-forwarded-proto") ?? "").split(",")[0].trim();
-	const scheme =
-		proto || (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
-	return `${scheme}://${host}`;
-}
 
 /**
  * The gate, as every dashboard screen uses it.

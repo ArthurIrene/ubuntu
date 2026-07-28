@@ -137,7 +137,15 @@ export const en: Record<EmailKey, EmailStrings> = {
 		paragraphs: [
 			"{name},",
 			"Your payment of {amount} has landed. Your payment buys the fabric and his hours. The needle starts when it arrives.",
-			"Your piece is in the queue. He will start it in about {days} days, and you will see it when he does.",
+			// `ubuntu-copy.md` §8 writes the queue line with a number — *he'll
+			// start it in about [X] days* — and that is the **order page's**
+			// sentence, where the offset is live beside it. An email is written
+			// once and read later, and the one figure available here is the global
+			// queue offset, which is zero today: *about 0 days* is worse than no
+			// number, and a visible bracket is for a figure nobody has answered
+			// rather than one that is genuinely nought. So this says the true thing
+			// without one.
+			"Your piece is in the queue. He will start it when the pieces before it are finished, and you will see it when he does.",
 		],
 		action: OPEN,
 	},
