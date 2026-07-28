@@ -14,6 +14,7 @@ import {
 import { getDb, schema } from "@/db/client";
 import { requireSession } from "@/lib/auth";
 import { sendOrderEmail } from "@/lib/notify";
+import { settledBy } from "@/lib/order-state";
 import { mintToken } from "@/lib/token";
 
 // The order screen's actions — **the judgements** *(R9a)*.
@@ -537,6 +538,46 @@ export async function startMaking(form: FormData): Promise<void> {
 		.limit(1);
 
 	if (!fit || !fit.checkedAt) redirect(`/dashboard/orders/${orderId}?e=fit`);
+
+	// **Nothing is cut before it is paid for**, which the policy page states
+	// plainly to customers. The queue only offers this row on a paid order, but
+	// the button also exists on the order screen — and a promise made on a public
+	// page should be enforced where the write happens, not where it is displayed.
+	// The balance is deliberately not part of this: it falls due on completion,
+	// before shipping *(R6)*.
+	const [schedule, payments] = await Promise.all([
+		db
+			.select({
+				gate: schema.orderPaymentSchedule.gate,
+				amount: schema.orderPaymentSchedule.amount,
+				position: schema.orderPaymentSchedule.position,
+			})
+			.from(schema.orderPaymentSchedule)
+			.where(eq(schema.orderPaymentSchedule.orderId, orderId)),
+		db.select().from(schema.payments).where(eq(schema.payments.orderId, orderId)),
+	]);
+
+	const settled = settledBy(
+		{
+			kind: "collection",
+			preferredChannel: "email",
+			events: [],
+			schedule,
+			payments: payments.map((payment) => ({
+				id: payment.id,
+				amount: payment.amount,
+				type: payment.type,
+				gate: payment.gate,
+				reported: payment.reported,
+				confirmedAt: payment.confirmedAt,
+				createdAt: payment.createdAt,
+			})),
+			hasFitRecord: true,
+			fitChecked: true,
+		},
+		"making",
+	);
+	if (!settled) redirect(`/dashboard/orders/${orderId}?e=unpaid`);
 
 	await db.insert(schema.orderEvents).values({ orderId, type: "making_started", actor: "founder" });
 	await sendOrderEmail(orderId, "in_the_making", { amount: null });

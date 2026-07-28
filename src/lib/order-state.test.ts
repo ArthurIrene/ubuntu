@@ -262,3 +262,56 @@ describe("daysWaiting", () => {
 		expect(queueActions(facts)).toEqual([{ key: "confirm_price", mode: "judgement" }]);
 	});
 });
+
+describe("the balance falls due before shipping, not before making", () => {
+	// R6 pays a commission in three: the design fee before he drafts, a payment
+	// to start cutting once the design is agreed, and the balance on completion.
+	// R4 then refuses "awaiting balance" a state of its own, because paid-ness is
+	// a separate dimension from the journey. Both together mean the balance is
+	// outstanding for the whole time the piece is being made.
+	const commission = (payments: PaymentFact[], events: EventFact["type"][]) =>
+		order({
+			kind: "commission",
+			events: [event("requested"), event("confirmed"), ...events.map((type) => event(type))],
+			schedule: [
+				{ gate: "design_fee", amount: 10_000, position: 0 },
+				{ gate: "cutting", amount: 40_000, position: 1 },
+				{ gate: "balance", amount: 30_000, position: 2 },
+			],
+			payments,
+		});
+
+	const fee = paid({ id: "fee", amount: 10_000, gate: "design_fee" });
+	const cutting = paid({ id: "cut", amount: 40_000, gate: "cutting" });
+	const balance = paid({ id: "bal", amount: 30_000, gate: "balance" });
+
+	it("reaches Paid with the balance still outstanding", () => {
+		const facts = commission([fee, cutting], ["design_shared", "design_agreed"]);
+		expect(status(facts)).toBe("paid");
+		expect(queueActions(facts)).toEqual([{ key: "start_making", mode: "judgement" }]);
+	});
+
+	it("will not post it while the balance is open, and calls that waiting on them", () => {
+		const facts = commission(
+			[fee, cutting],
+			["design_shared", "design_agreed", "making_started", "making_complete"],
+		);
+		expect(queueActions(facts).some((a) => a.key === "mark_shipped")).toBe(false);
+		expect(waitingOnCustomer(facts)).toBe(true);
+	});
+
+	it("offers the post office the moment the balance lands", () => {
+		const facts = commission(
+			[fee, cutting, balance],
+			["design_shared", "design_agreed", "making_started", "making_complete"],
+		);
+		expect(queueActions(facts)).toEqual([{ key: "mark_shipped", mode: "fact" }]);
+		expect(waitingOnCustomer(facts)).toBe(false);
+	});
+
+	it("still holds a collection order to its single gate at both moments", () => {
+		const unpaid = order({ events: [event("requested"), event("confirmed")] });
+		expect(status(unpaid)).toBe("confirmed");
+		expect(waitingOnCustomer(unpaid)).toBe(true);
+	});
+});

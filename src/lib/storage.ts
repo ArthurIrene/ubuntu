@@ -137,12 +137,23 @@ function settings(): Record<string, string | undefined> {
 	return getCloudflareContext().env as unknown as Record<string, string | undefined>;
 }
 
-function endpoint(): { url: string; key: string } {
+function endpoint(): { url: string; headers: Record<string, string> } {
 	const env = settings();
 	const url = env.SUPABASE_URL;
 	const key = env.SUPABASE_SERVICE_ROLE_KEY;
 	if (!url || !key) throw new Error("storage: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set");
-	return { url: url.replace(/\/$/, ""), key };
+
+	// **Both headers, and the `apikey` one is not redundant.** Supabase's newer
+	// `sb_secret_…` keys are opaque strings rather than JWTs, and Storage
+	// validates a lone `Authorization` header as a compact JWS — which an opaque
+	// key is not, so it answers *Invalid Compact JWS* and nothing uploads. The
+	// `apikey` header is what identifies the key as a project key. Found by
+	// running it; the auth endpoints happen to accept either, so this only
+	// surfaces here.
+	return {
+		url: url.replace(/\/$/, ""),
+		headers: { apikey: key, Authorization: `Bearer ${key}` },
+	};
 }
 
 /**
@@ -157,14 +168,14 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 
 export const storage: Storage = {
 	async upload(bucket, key, body, contentType) {
-		const { url, key: apiKey } = endpoint();
+		const { url, headers } = endpoint();
 
 		const response = await fetch(
 			`${url}/storage/v1/object/${bucketName(bucket)}/${encodeURI(key)}`,
 			{
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${apiKey}`,
+					...headers,
 					"Content-Type": contentType,
 					"Cache-Control": IMMUTABLE,
 					// Re-uploading the same content-hashed key is the same bytes, so
@@ -187,20 +198,20 @@ export const storage: Storage = {
 	},
 
 	async streamPrivate(key) {
-		const { url, key: apiKey } = endpoint();
+		const { url, headers } = endpoint();
 		const response = await fetch(
 			`${url}/storage/v1/object/${bucketName("private")}/${encodeURI(key)}`,
-			{ headers: { Authorization: `Bearer ${apiKey}` } },
+			{ headers },
 		);
 		if (!response.ok || !response.body) return null;
 		return response.body;
 	},
 
 	async delete(bucket, key) {
-		const { url, key: apiKey } = endpoint();
+		const { url, headers } = endpoint();
 		await fetch(`${url}/storage/v1/object/${bucketName(bucket)}/${encodeURI(key)}`, {
 			method: "DELETE",
-			headers: { Authorization: `Bearer ${apiKey}` },
+			headers,
 		});
 		// A missing object is not an error. Deleting twice is the same outcome as
 		// deleting once, and a 404 here would only ever be noise.

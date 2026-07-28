@@ -203,6 +203,12 @@ export default async function OrderScreen({
 			)}
 			{e === "reason" && <p role="alert">A price adjustment needs a reason.</p>}
 			{e === "amount" && <p role="alert">A payment needs an amount.</p>}
+			{e === "unpaid" && (
+				<p role="alert">
+					Nothing is cut before it is paid for. The balance is not part of that — it falls due on
+					completion, before it ships.
+				</p>
+			)}
 
 			{/*
 			 * **The action the queue sent him for sits at the top** *(R9c)*. He

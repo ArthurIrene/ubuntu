@@ -65,6 +65,21 @@ async function contentHash(bytes: ArrayBuffer): Promise<string> {
 export async function POST(request: Request): Promise<Response> {
 	await requireSession();
 
+	try {
+		return await store(request);
+	} catch (error) {
+		// The message, to an authenticated admin, and nothing else. A bare 500
+		// tells him a photograph did not upload and gives him nothing to do about
+		// it, and this endpoint is behind the session — but a stack can carry a
+		// query and a provider error can echo a key, so neither travels.
+		return Response.json(
+			{ error: error instanceof Error ? error.message : "the upload failed" },
+			{ status: 500 },
+		);
+	}
+}
+
+async function store(request: Request): Promise<Response> {
 	const form = await request.formData();
 	const kind = String(form.get("kind") ?? "");
 	const targetId = String(form.get("targetId") ?? "");

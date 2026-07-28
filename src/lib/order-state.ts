@@ -156,15 +156,47 @@ export function openGate(facts: OrderFacts): ScheduleFact | null {
 }
 
 /**
- * True while any gate is still waiting on a figure.
+ * True while any gate that falls due by `by` is still waiting on a figure.
  *
  * **An order with an unpriced gate is not paid, however much has landed.** A
  * commission's cutting payment and balance have no amount until the design is
  * agreed *(R6)*, and treating "nothing is currently owed" as "paid in full"
  * would put an order into the making before there was a price for the piece.
  */
-export function hasUnpricedGate(facts: OrderFacts): boolean {
-	return facts.schedule.some((entry) => entry.amount === null);
+export function hasUnpricedGate(facts: OrderFacts, by: Milestone = "shipping"): boolean {
+	return dueBy(facts, by).some((entry) => entry.amount === null);
+}
+
+/**
+ * The two moments money has to have arrived by.
+ *
+ * **The balance falls due on completion, before shipping** *(R6)* — so it is
+ * outstanding for the whole time a commission is being made, and R4 is explicit
+ * that *awaiting balance* needs no state of its own because paid-ness is a
+ * separate dimension from the journey.
+ *
+ * This is what stops the balance blocking the needle and stops it being
+ * forgotten at the post office.
+ */
+export type Milestone = "making" | "shipping";
+
+/** The gates that must be settled before a milestone. */
+export function dueBy(facts: OrderFacts, milestone: Milestone): ScheduleFact[] {
+	return gates(facts).filter((entry) => milestone === "shipping" || entry.gate !== "balance");
+}
+
+/**
+ * Whether everything owed by a milestone has arrived.
+ *
+ * A collection order has one unnamed gate, so both milestones ask the same
+ * question of it — which is R6's *a collection order is a commission with one
+ * gate*, falling out of the model rather than being special-cased.
+ */
+export function settledBy(facts: OrderFacts, milestone: Milestone): boolean {
+	const due = dueBy(facts, milestone);
+	if (due.length === 0) return false;
+	if (due.some((entry) => entry.amount === null)) return false;
+	return due.every((entry) => netPaid(facts, entry.gate) >= entry.amount!);
 }
 
 /**
@@ -186,14 +218,19 @@ export function status(facts: OrderFacts): Status {
 	// **Paid and In the making stay separate** *(R4)*. Paid means in the queue;
 	// In the making means he has started. That is the honest version of
 	// priority-as-position, and collapsing them would sell speed.
-	if (
-		hasEvent(facts, "confirmed") &&
-		gates(facts).length > 0 &&
-		!hasUnpricedGate(facts) &&
-		openGate(facts) === null
-	) {
-		return "paid";
-	}
+	// **Paid means everything owed *so far*.** On a commission the balance falls
+	// due on completion, before shipping, so it is outstanding for the whole time
+	// the piece is being made — R4 is explicit that *awaiting balance* needs no
+	// state of its own, because paid-ness is a separate dimension from the
+	// journey. Requiring it here would mean no commission ever reached the
+	// needle.
+	//
+	// **A commission cannot reach Paid before the design is agreed** *(R6)*. The
+	// piece is minted at that moment, which is when making days become knowable
+	// and it enters the queue — so however much has landed, an unagreed design is
+	// an order with nothing yet to make.
+	const designSettled = facts.kind === "collection" || hasEvent(facts, "design_agreed");
+	if (hasEvent(facts, "confirmed") && designSettled && settledBy(facts, "making")) return "paid";
 
 	if (facts.kind === "commission" && netPaid(facts, "design_fee") > 0) return "in_design";
 	if (hasEvent(facts, "confirmed")) return "confirmed";
@@ -357,7 +394,14 @@ export function queueActions(facts: OrderFacts): QueueAction[] {
 		actions.push({ key: "mark_complete", mode: "fact" });
 	}
 
-	if (hasEvent(facts, "making_complete") && !hasEvent(facts, "shipped")) {
+	// **The balance falls due before it ships** *(R6)*. Nothing stops him
+	// finishing the piece; this is the one place the last gate is enforced, and
+	// while it is open the order is waiting on them rather than on him.
+	if (
+		hasEvent(facts, "making_complete") &&
+		!hasEvent(facts, "shipped") &&
+		settledBy(facts, "shipping")
+	) {
 		actions.push({ key: "mark_shipped", mode: "fact" });
 	}
 
@@ -393,6 +437,8 @@ export function waitingOnCustomer(facts: OrderFacts): boolean {
 
 	// Money owed at an open gate, or a design shared and not yet agreed.
 	if (hasEvent(facts, "confirmed") && openGate(facts) !== null) return true;
+	// Finished, and waiting on the balance before it can be posted.
+	if (hasEvent(facts, "making_complete") && !settledBy(facts, "shipping")) return true;
 	if (hasEvent(facts, "design_shared") && !hasEvent(facts, "design_agreed")) return true;
 	return false;
 }
