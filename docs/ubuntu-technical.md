@@ -139,6 +139,39 @@ is **free**, done online, reviewed within 30 working days, and attaches to the R
 conversation already on the critical path. Not legal advice; it belongs in that
 filing conversation.
 
+**A database connection belongs to the request that opened it, and Hyperdrive
+does not change that rule — it changes what obeying it costs.** *(Found at Gate
+0, deploying the connection path in §10.)* `src/db/client.ts` originally cached
+one client per isolate, keyed by URL, reasoning that a handshake to Europe was
+worth amortising across the many requests an isolate serves. It hangs. A socket
+on Workers is owned by the request that created it, and an isolate outlives a
+request, so the second request to reach a warm isolate inherits a client whose
+socket it may not touch and the query never returns — **a timeout, not an error**,
+which is the worst shape a bug can take. Hyperdrive was deployed *with the cache
+still in* specifically to test whether it rescued the pattern. It did not. What
+it changes is that the pool now sits at Cloudflare's edge already connected to
+Supabase, so opening a connection per request is cheap enough that the cache is
+safe to **delete rather than repair**. The client is now scoped to one request —
+a `WeakMap` keyed on the request's own `ExecutionContext`, so a page that reads
+three times still opens one connection and nothing crosses into the next request.
+
+**Closing the connection is what makes Hyperdrive fast; abandoning it silently
+undoes the point.** *(Same session.)* An abandoned socket is not a returned one:
+Hyperdrive tears the origin connection down and the next request pays TLS and
+SCRAM to Frankfurt again. Ending it cleanly leaves a warm connection behind.
+Measured, this is the single largest number in the whole exercise — **median
+389ms → 101ms**, with no other change. It has to run *after* the response, since
+`end()` refuses new queries the moment it is called, so it is Next's `after()`
+that does it and nothing earlier would survive a page that reads twice.
+
+**Hyperdrive query caching is deliberately off.** It would serve reads up to 60
+seconds stale, and the Today queue's whole contract is that a row leaves the
+moment he acts on it — a queue that shows work already done is the failure that
+section is written to prevent. What we want from Hyperdrive is the pooled
+connection, not a cache in front of order state. This is a `--caching-disabled`
+flag on the config, not a code decision, so it is invisible in the repo: it is
+recorded here because that is the only place it can be.
+
 **Automated WhatsApp is a paid dependency; hand-sent WhatsApp is not.** Meta bills
 per business-initiated message outside an open 24-hour customer service window —
 which is exactly what an order status update is. The Business API is therefore
@@ -519,9 +552,25 @@ ordering.
 
 Do not debate these further. They are named so they get resolved in the right place.
 
-- **The Postgres connection path from Workers** — direct, Hyperdrive (included on
-  the Workers free plan), or the Supabase HTTP client. Settled in setup Stage 4 by
-  a deployed worker reading a real row.
+- ~~**The Postgres connection path from Workers**~~ — **settled, Gate 0:
+  Hyperdrive over the Supabase *session* pooler (5432).** Measured by a deployed
+  worker reading a real row, which is how this list said it would be settled.
+  12/12 requests return 200; a warm read is **~100ms** against the ~500ms direct
+  Postgres was giving, and the cold outliers land at ~390ms, which is one TLS
+  handshake plus SCRAM auth to Frankfurt.
+
+  **The port is the part worth remembering. Hyperdrive is itself a transaction
+  pooler**, so pointing it at Supabase's transaction pooler on 6543 stacks two of
+  them and the connection hangs: `error code: 1101`, and the Worker log shows
+  invocations cancelled with `waitUntil() tasks did not complete`. Session mode
+  underneath is the combination Cloudflare and Supabase both document. Repointing
+  the same Hyperdrive config from 6543 to 5432 took it from 0/12 to 12/12 with no
+  redeploy and no code change, so the port is the whole difference.
+
+  Two consequences in `src/db/client.ts`, both measured and neither worth
+  relitigating — see §4. The third option, the Supabase HTTP client, stays named
+  and unbuilt: it is a different wire protocol and a dependency this bundle would
+  have to find room for.
 - **Whether View Transitions survive the Workers runtime** under OpenNext. Settled
   in Phase 0.
 - **How the motion actually feels.** Settled in Phase 6.

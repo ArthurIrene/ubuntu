@@ -15,10 +15,17 @@ pnpm build        # next build
 pnpm preview      # opennextjs-cloudflare build && preview  (production-like, local)
 pnpm deploy       # opennextjs-cloudflare build && deploy
 pnpm check:bundle # check worker bundle against the 3 MiB limit
+pnpm db:generate  # drizzle-kit generate — schema change into a new migration
+pnpm db:migrate   # apply pending migrations. BY HAND, never in the deploy
 ```
 
 Run `pnpm preview`, not just `pnpm dev`, before saying a change works. Several
 Cloudflare constraints only surface in the Workers runtime.
+
+**Migrations are forward-only and additive, and never run inside a deploy.** A
+deploy that migrates can fail halfway through a schema change on a live database
+at a moment nobody chose, and there is nobody to call. `pnpm db:migrate` refuses
+a generated `DROP` unless it is passed `--allow-destructive` deliberately.
 
 ## Stack
 
@@ -28,7 +35,25 @@ Cloudflare constraints only surface in the Workers runtime.
 - **Supabase** — Postgres and the single admin login. **Not** storage, not file serving.
   Login is **password *and* magic link, both, every time.** The password is the one
   factor his phone does not contain — so it is never saved in the browser.
-- **Drizzle** — database layer
+- **Drizzle** — database layer. Schema in `src/db/schema/`, one file per area;
+  migrations in `drizzle/`. `src/db/client.ts` is the **only** module that opens a
+  connection — same rule as the four adapters. The connection string comes from the
+  `HYPERDRIVE` binding when one is bound and `DATABASE_URL` otherwise; the fallback
+  stays for local work and scripts.
+- **Hyperdrive over Supabase's *session* pooler (5432)** — decided at Gate 0 by
+  measurement, not preference. **Hyperdrive is itself a transaction pooler**, so
+  pointing it at the 6543 transaction pooler stacks two and every request hangs
+  (`1101`, `waitUntil() tasks did not complete`). Session mode underneath is the
+  documented combination. Warm reads are ~100ms.
+  - **The connection is per request, never per isolate.** A socket belongs to the
+    request that opened it; a cached client hangs the next request that finds a
+    warm isolate. Hyperdrive makes obeying this cheap — it does not repeal it.
+  - **`after(() => sql.end())` is load-bearing**, not tidiness. A closed connection
+    goes back to Hyperdrive's pool; an abandoned one costs the next request a full
+    handshake to Frankfurt. Median 389ms → 101ms.
+  - **Query caching is off, deliberately.** It would serve reads up to 60s stale,
+    and the Today queue's contract is that a row leaves the moment he acts.
+  - Reasoning in full: `docs/ubuntu-technical.md` §4 and §10.
 - **Tailwind** for layout; hand-written CSS and SVG for all motion
 
 ## Hard constraints
