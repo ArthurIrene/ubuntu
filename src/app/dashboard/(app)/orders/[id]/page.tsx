@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, desc, eq } from "drizzle-orm";
 
+import PhotoUpload from "@/components/photo-upload";
 import { fromCanonical, isMeasurementKey, MEASUREMENTS } from "@/content/measurements";
 import { getDb, schema } from "@/db/client";
 import { formatMoney } from "@/emails/order";
@@ -518,17 +519,24 @@ export default async function OrderScreen({
 			{/* ── Photos ────────────────────────────────────────────────────── */}
 			<section>
 				<h2>Photos</h2>
+				{/*
+				 * **Progress photos get one derivative at 1000 px** *(R8)* — private,
+				 * behind the token, where posting speed matters more than polish.
+				 * Resized on his device before they are sent, like everything else.
+				 */}
+				<PhotoUpload target={{ kind: "progress", orderId: order.id }} />
 				<ul>
 					{images.map((image) => (
 						<li key={image.id}>
-							{image.kind} · {image.width}×{image.height}
+							{image.kind} · {image.width}×{image.height} ·{" "}
+							{image.createdAt.toISOString().slice(0, 10)}
 						</li>
 					))}
 					{images.length === 0 && <li>None yet.</li>}
 				</ul>
 				<p>
-					Progress photos are private and streamed through the Worker behind the order token —
-					never the public bucket.
+					These are private. They are streamed through the Worker with the order token checked,
+					never served from the public bucket.
 				</p>
 			</section>
 

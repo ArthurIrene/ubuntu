@@ -1,12 +1,27 @@
-// The storage adapter. This is the only module that may talk to R2 —
+// The storage adapter. This is the only module that may talk to a file store —
 // components, pages and route handlers import from here and never reach for a
 // storage SDK.
 //
 // Public and private are two buckets, not one bucket with a naming convention:
-// the boundary is enforced by R2, not by us remembering.
+// the boundary is enforced by the store, not by us remembering.
 //
-// Interface only. R2 is not enabled yet, so every method throws — a seam the
-// rest of the app can import and type against before the body exists.
+// ## It is pointed at Supabase Storage, and R2 is still the plan
+//
+// `ubuntu-technical.md` §4 named this exactly: *R2 may require a payment method
+// on file even for the free tier — test this on day one. If R2 cannot be
+// enabled, launch on Supabase Storage and let the storage adapter absorb the
+// swap later.* R2 is not enabled, so this is that fallback, taken deliberately
+// and on the free tier of a project we already have.
+//
+// **The named cost.** §3's split — *Supabase holds the database and auth; it
+// does not hold files, and it does not serve images* — is the thing being
+// suspended, not repealed. Serving catalogue photos through Supabase spends its
+// metered egress where R2 has none, which is precisely why content-hashed keys
+// and `immutable` cache headers matter more here than they would on R2: a
+// repeat view must never come back to the origin. The swap is this file and two
+// environment variables, which is what the adapter was for.
+
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * Which bucket a file lives in, and the whole of the public/private decision.
@@ -41,10 +56,6 @@ export interface FocalPoint {
  * reserves its space before it loads — a page that shifts as photos arrive
  * breaks the reveals underneath them, which makes layout shift a motion bug
  * here rather than a metric.
- *
- * Nothing on this shape is derived from the file when it is read. The
- * dimensions and the focal point are settled at upload, in the browser, and
- * travel with the database row from then on.
  */
 export interface StoredImage {
 	/** The object key within its bucket. Says nothing about which bucket. */
@@ -58,8 +69,8 @@ export interface StoredImage {
 }
 
 /**
- * Every file operation the app is allowed to perform. Implemented once,
- * against R2; imported everywhere else.
+ * Every file operation the app is allowed to perform. Implemented once;
+ * imported everywhere else.
  */
 export interface Storage {
 	/**
@@ -80,9 +91,7 @@ export interface Storage {
 	): Promise<void>;
 
 	/**
-	 * The URL a browser fetches a public object from, on the custom R2 domain —
-	 * never the `r2.dev` address, which is rate-limited and not for production
-	 * traffic.
+	 * The URL a browser fetches a public object from.
 	 *
 	 * Synchronous, because it is string work: this is what lets a Server
 	 * Component build a `srcset` without awaiting anything.
@@ -112,26 +121,88 @@ export interface Storage {
 }
 
 /**
- * The single body every method has until R2 is switched on. One thrower, so
- * the real implementation replaces bodies and leaves the signatures above
- * untouched.
+ * The two buckets, by name.
  *
- * Returns `never`, which is why it satisfies each method's return type without
- * any of them resolving to a fake success.
+ * Overridable so a second environment does not write into the first one's
+ * files, and defaulted so nothing has to be configured to work.
  */
-function notImplemented(): never {
-	throw new Error(
-		"storage: not implemented — R2 not yet enabled (Phase 1 / weekend)",
-	);
+function bucketName(bucket: Bucket): string {
+	const env = settings();
+	return bucket === "public"
+		? (env.STORAGE_PUBLIC_BUCKET ?? "ubuntu-public")
+		: (env.STORAGE_PRIVATE_BUCKET ?? "ubuntu-private");
+}
+
+function settings(): Record<string, string | undefined> {
+	return getCloudflareContext().env as unknown as Record<string, string | undefined>;
+}
+
+function endpoint(): { url: string; key: string } {
+	const env = settings();
+	const url = env.SUPABASE_URL;
+	const key = env.SUPABASE_SERVICE_ROLE_KEY;
+	if (!url || !key) throw new Error("storage: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set");
+	return { url: url.replace(/\/$/, ""), key };
 }
 
 /**
- * The adapter instance. The app imports this; when R2 is enabled, the bodies
- * below are filled in and nothing that imports them changes.
+ * A year, immutable.
+ *
+ * **The highest-value free decision in the image section** *(R8)*: keys are
+ * content-hashed, so an object at a given key never changes, and a repeat view
+ * never comes back to the origin. It matters more on Supabase Storage than it
+ * would on R2, because here reads are metered bandwidth.
  */
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
 export const storage: Storage = {
-	upload: notImplemented,
-	publicUrl: notImplemented,
-	streamPrivate: notImplemented,
-	delete: notImplemented,
+	async upload(bucket, key, body, contentType) {
+		const { url, key: apiKey } = endpoint();
+
+		const response = await fetch(
+			`${url}/storage/v1/object/${bucketName(bucket)}/${encodeURI(key)}`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": contentType,
+					"Cache-Control": IMMUTABLE,
+					// Re-uploading the same content-hashed key is the same bytes, so
+					// an overwrite is a no-op rather than a conflict.
+					"x-upsert": "true",
+				},
+				body,
+			},
+		);
+
+		if (!response.ok) {
+			throw new Error(`storage: upload refused (${response.status})`);
+		}
+	},
+
+	publicUrl(key) {
+		const env = settings();
+		const url = (env.SUPABASE_URL ?? "").replace(/\/$/, "");
+		return `${url}/storage/v1/object/public/${bucketName("public")}/${encodeURI(key)}`;
+	},
+
+	async streamPrivate(key) {
+		const { url, key: apiKey } = endpoint();
+		const response = await fetch(
+			`${url}/storage/v1/object/${bucketName("private")}/${encodeURI(key)}`,
+			{ headers: { Authorization: `Bearer ${apiKey}` } },
+		);
+		if (!response.ok || !response.body) return null;
+		return response.body;
+	},
+
+	async delete(bucket, key) {
+		const { url, key: apiKey } = endpoint();
+		await fetch(`${url}/storage/v1/object/${bucketName(bucket)}/${encodeURI(key)}`, {
+			method: "DELETE",
+			headers: { Authorization: `Bearer ${apiKey}` },
+		});
+		// A missing object is not an error. Deleting twice is the same outcome as
+		// deleting once, and a 404 here would only ever be noise.
+	},
 };

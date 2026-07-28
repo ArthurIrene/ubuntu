@@ -10,6 +10,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "node scripts/db-migrate.mjs",
 		"admin:seed": "node scripts/admin-seed.mjs",
+		"storage:init": "node scripts/storage-init.mjs",
 		"start": "next start",
 		"lint": "next lint",
 		"cf": "node --env-file-if-exists=.env.local node_modules/@opennextjs/cloudflare/dist/cli/index.js",

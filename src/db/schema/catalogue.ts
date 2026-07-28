@@ -280,12 +280,19 @@ export const pieces = pgTable(
 		// stay in the publish action; price and scene line are the ones that
 		// would reach a stranger, and the database can simply refuse them.
 		//
-		// `making_days` is deliberately *not* in here. The floor R9b wrote is
-		// four things and that is not one of them, and a check constraint is the
-		// wrong place to add a fifth nobody asked for.
+		// **`making_days` joined the floor in Phase 2**, by decision rather than
+		// by drift. The earlier note here argued it was a fifth thing nobody
+		// asked for; what changed the answer is what a live piece with no making
+		// days actually does. The customer sees making days plus the global queue
+		// offset *(R4)* — that sum **is** the timeframe on the page, so a live
+		// piece without one either shows nothing where a delivery estimate
+		// belongs or silently reads as the offset alone. Both are a promise the
+		// brand did not make, on the one screen where *made-to-order* has to
+		// explain itself. It is a property of the craft, set once, and he is
+		// setting it anyway.
 		check(
 			"pieces_publish_floor",
-			sql`state <> 'live' OR (scene_line IS NOT NULL AND base_price IS NOT NULL AND published_at IS NOT NULL)`,
+			sql`state <> 'live' OR (scene_line IS NOT NULL AND base_price IS NOT NULL AND published_at IS NOT NULL AND making_days IS NOT NULL)`,
 		),
 		// R6's rule — a commission piece is never listed publicly and never
 		// enters the window display — is not enforced here, and that is on

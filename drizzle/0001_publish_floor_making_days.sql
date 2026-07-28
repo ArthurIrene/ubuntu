@@ -1,0 +1,2 @@
+ALTER TABLE "pieces" DROP CONSTRAINT "pieces_publish_floor";--> statement-breakpoint
+ALTER TABLE "pieces" ADD CONSTRAINT "pieces_publish_floor" CHECK (state <> 'live' OR (scene_line IS NOT NULL AND base_price IS NOT NULL AND published_at IS NOT NULL AND making_days IS NOT NULL));
