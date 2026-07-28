@@ -12,6 +12,25 @@
 		"binding": "ASSETS",
 		"directory": ".open-next/assets"
 	},
+	// Postgres. `src/db/client.ts` reads `HYPERDRIVE.connectionString` when this
+	// binding is present and falls back to the `DATABASE_URL` secret when it is
+	// not, so the connection path is this block rather than a code change —
+	// which is what let `docs/ubuntu-technical.md` §10 be settled by measurement.
+	//
+	// The origin is Supabase's *transaction* pooler on 6543. Plain direct
+	// Postgres does not survive here: the per-isolate client hangs the moment an
+	// isolate is reused, which is what sent us through Hyperdrive.
+	//
+	// Query caching is off deliberately. Hyperdrive would otherwise serve reads
+	// up to 60s stale, and the Today queue's whole contract is that a row leaves
+	// the moment he acts on it. What we want from Hyperdrive is the pooled
+	// connection, not a cache in front of order state.
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "45c946dce9c7496690e8867a35232595"
+		}
+	],
 	"services": [
 		{
 			// Self-reference service binding, the service name must match the worker name
