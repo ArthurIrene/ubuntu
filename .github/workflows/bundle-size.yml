@@ -1,0 +1,54 @@
+# The Worker bundle stays under 3 MiB gzipped, or the merge does not happen.
+#
+# Cloudflare's free plan refuses a Worker over that limit at upload time. Without
+# this check, the first anyone knows is a failed deploy — and the commit that
+# spent the headroom is by then several merges back, which is the expensive way
+# to find out. Bundle size is a design constraint here, not a performance
+# metric: it is the reason there is no animation library, no i18n library and no
+# image-processing library in this repo.
+#
+# The build is the slow part (a few minutes). It runs on pull requests and on
+# pushes to main, and nowhere else.
+
+name: Bundle size
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first. The only run whose answer
+# matters is the one for the code that will actually merge.
+concurrency:
+  group: bundle-size-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Under 3 MiB gzipped
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # `pnpm check:bundle` measures a build; it does not make one. This is the
+      # same OpenNext build a deploy runs, minus the upload.
+      - name: Build the Worker
+        run: pnpm exec opennextjs-cloudflare build
+
+      # Exits non-zero over the limit, which fails the job and blocks the merge
+      # once this check is required on the branch.
+      - name: Measure
+        run: pnpm check:bundle

@@ -1,0 +1,135 @@
+# Keeps the Supabase project awake, and shouts when it cannot.
+#
+# **A free Supabase project pauses after seven days without activity.** A paused
+# project is not a slow site — every page that reads the database is down, and
+# it comes back only when someone opens the Supabase dashboard and un-pauses it
+# by hand. Nobody notices a paused project on a Tuesday; a customer notices it.
+#
+# `ubuntu-technical.md` §9 moved this out of Phase 7 and into setup Stage 6 for
+# exactly that reason: a keep-alive that arrives at launch arrives about six
+# months late.
+#
+# ## The job is load-bearing, so it is loud
+#
+# §8 names the failure mode directly — *if it silently fails, the site is dead.*
+# A cron job that stops working looks identical to one that is working, so this
+# opens a GitHub issue when the query fails. The issue is the alert; the email
+# GitHub sends about the failed run is the second one.
+#
+# ## The trap in GitHub's own scheduler
+#
+# **GitHub disables scheduled workflows in a repository with no activity for 60
+# days**, and it emails once about it. This repo will have quiet months. If that
+# mail is missed, this job stops, the project pauses a week later, and the two
+# failures look like one. Re-enable it from the Actions tab; there is no way to
+# opt out.
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Twice a week — Sunday and Wednesday, 06:12 UTC. The seven-day pause window
+    # means the gap that matters is the long one, and Sunday→Wednesday→Sunday is
+    # three and four days: one missed run still leaves room before it pauses.
+    #
+    # 06:12 rather than 06:00 because GitHub queues every cron job scheduled on
+    # the hour together, and jobs can be dropped under that load.
+    - cron: "12 6 * * 0,3"
+  # So it can be proved to work today rather than believed to work in three days.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: SELECT 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Only to file the issue below.
+      issues: write
+
+    steps:
+      # psql ships on the runner image, so there is nothing to install and
+      # nothing that can break between the cron firing and the query running.
+      # Use the session connection string here — the same 5432 pooler the
+      # Worker reaches through Hyperdrive. One query a week needs no pooling of
+      # its own; it needs the port that answers.
+      - name: Ping the database
+        id: ping
+        env:
+          # Repository secret. Never echoed — psql reads it from the environment
+          # and the connection string carries the database password.
+          PGCONNECT_TIMEOUT: "15"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret is not set. This job has never been able to run."
+            exit 1
+          fi
+          psql "$DATABASE_URL" --no-psqlrc --quiet --tuples-only --command 'SELECT 1' > /dev/null
+          echo "Database answered."
+
+      # The alert. A failed run also emails, but email is missable and an open
+      # issue is still open next week.
+      - name: Raise the alarm
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Supabase keep-alive failed";
+            const body = [
+              "The twice-weekly `SELECT 1` did not succeed.",
+              "",
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "",
+              "**A free Supabase project pauses after seven days without activity.**",
+              "If this keeps failing, the site goes down and stays down until the",
+              "project is un-paused by hand in the Supabase dashboard.",
+              "",
+              "Check, in order:",
+              "1. Is the project paused or over quota? (Supabase dashboard)",
+              "2. Did the database password rotate? The `DATABASE_URL` secret would",
+              "   need updating.",
+              "3. Is Supabase itself down?",
+              "",
+              "Close this issue once a run goes green.",
+            ].join("\n");
+
+            // One issue, reopened and commented on, rather than a new one every
+            // failed run. A wall of identical issues is how an alert becomes
+            // something you scroll past.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "all",
+              labels: "keep-alive",
+              per_page: 10,
+            });
+
+            const open = existing.data.find((issue) => issue.title === title);
+
+            if (!open) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["keep-alive"],
+              });
+              return;
+            }
+
+            if (open.state === "closed") {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.number,
+                state: "open",
+              });
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: open.number,
+              body,
+            });
