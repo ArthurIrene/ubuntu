@@ -188,6 +188,19 @@ export interface Auth {
 	 */
 	hasFreshLink(): Promise<boolean>;
 
+	/**
+	 * Change the login address, in **both** places that hold it.
+	 *
+	 * The password lives in Supabase and the revocation clock lives in our
+	 * `admin` row, and the two are joined by this address. Updating one without
+	 * the other is a login that stops working — so it is one method here rather
+	 * than two calls a screen has to remember to make in order.
+	 *
+	 * The caller has already proved a fresh link *(R12b)*; this does not check
+	 * again.
+	 */
+	changeEmail(next: string): Promise<boolean>;
+
 	/** Drop this browser's session cookie. Everyone else's survives. */
 	signOut(): Promise<void>;
 
@@ -554,6 +567,36 @@ export const auth: Auth = {
 		if (!claim) return false;
 		const admin = await adminRow();
 		return Boolean(admin && admin.id === claim.a);
+	},
+
+	async changeEmail(next): Promise<boolean> {
+		const admin = await adminRow();
+		if (!admin) return false;
+
+		const db = await getDb();
+		const [row] = await db
+			.select({ authUserId: schema.admin.authUserId })
+			.from(schema.admin)
+			.where(eq(schema.admin.id, admin.id))
+			.limit(1);
+
+		if (row?.authUserId) {
+			const { status } = await supabase(`/auth/v1/admin/users/${row.authUserId}`, "service", {
+				email: next,
+				email_confirm: true,
+			});
+			// If Supabase refuses, our row must not move either — otherwise the
+			// address he types at the login screen and the address that holds the
+			// password have quietly parted company.
+			if (status >= 400) return false;
+		}
+
+		await db
+			.update(schema.admin)
+			.set({ email: next, updatedAt: new Date() })
+			.where(eq(schema.admin.id, admin.id));
+
+		return true;
 	},
 
 	async signOut(): Promise<void> {
