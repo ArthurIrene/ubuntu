@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add *)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "Bash(pnpm exec *)",
+      "Bash(cat src/lib/auth.ts src/lib/payments.ts src/lib/storage.ts src/lib/email.ts wrangler.jsonc; echo \"---DEVVARS keys---\"; sed 's/=.*/=<redacted>/' .dev.vars; echo \"---scripts---\"; ls scripts/)",
+      "Bash(npx wrangler *)",
+      "Bash(env)",
+      "Bash(docker cp *)",
+      "Bash(docker exec *)",
+      "Bash(pnpm db:migrate)",
+      "Bash(node -e ' *)",
+      "Bash(pnpm check:bundle)"
+    ],
+    "additionalDirectories": [
+      "/home/arthur/ubuntu"
+    ]
+  }
+}
