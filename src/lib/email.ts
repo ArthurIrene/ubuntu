@@ -5,8 +5,7 @@
 // whatever channel the customer chose, because a chat thread is not durable
 // storage and the token needs a permanent address. WhatsApp is hand-sent.
 //
-// The whole contract is one `send()`. Interface only — no provider is
-// configured yet, so it throws.
+// The whole contract is one `send()`.
 
 /**
  * A message with nothing left to decide: addressed, worded and ready for the
@@ -23,8 +22,7 @@
  *
  * There is no `locale` field either. The subject and body arrive already
  * selected by the order's locale, so carrying it here would be a second copy
- * of a decision made upstream and nothing at this layer would read it. If a
- * `Content-Language` header ever earns its place, it comes back then.
+ * of a decision made upstream and nothing at this layer would read it.
  */
 export interface EmailMessage {
 	/** The recipient address. One per send — there is no bulk send here. */
@@ -70,24 +68,74 @@ export interface Email {
 }
 
 /**
- * The single body every method has until a provider is configured. One
- * thrower, so the real implementation replaces bodies and leaves the signature
- * above untouched.
+ * Thrown when no provider is configured, so a caller can tell *nothing was
+ * wired up* from *the provider refused this message*.
  *
- * Returns `never`, which is why it satisfies the method's return type without
- * resolving to a fake success — the one failure mode this adapter must never
- * have.
+ * The queue reads the difference: a missing key is a deployment problem he
+ * should be told about in plain words, and a rejected recipient is a row in
+ * his queue saying *couldn't reach her, resend or call*.
  */
-function notImplemented(): never {
-	throw new Error(
-		"email: not implemented — email provider not yet configured (later phase)",
-	);
+export class EmailNotConfiguredError extends Error {
+	constructor() {
+		super("email: RESEND_API_KEY and EMAIL_FROM are not set");
+	}
 }
 
 /**
- * The adapter instance. The app imports this; when a provider is chosen, the
- * body below is filled in and nothing that imports it changes.
+ * **Resend**, over its REST API, with no SDK.
+ *
+ * Chosen against the free-tier constraint and checked the way `CLAUDE.md` asks
+ * every service to be checked before it is added:
+ *
+ * - **No card at signup**, and no card to send. 3,000 messages a month and 100
+ *   a day on the free plan, against nine transactional emails per order.
+ * - **One domain** on the free plan. Until that domain's DNS is verified,
+ *   Resend will only deliver to the account holder's own address — which is
+ *   enough to walk an order end to end in preview, and not enough to mail a
+ *   customer. The records are three CNAMEs on a zone already at Cloudflare.
+ * - The SDK is not installed. This is two `fetch` calls against a documented
+ *   JSON endpoint, and the 3 MiB budget does not need to carry a package for
+ *   it.
+ *
+ * Swapping providers is this function and the two environment variables it
+ * reads. Nothing else in the app knows the name Resend.
+ */
+async function resendSend(message: EmailMessage): Promise<void> {
+	const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+	const env = getCloudflareContext().env as unknown as Record<string, string | undefined>;
+
+	const key = env.RESEND_API_KEY;
+	const from = env.EMAIL_FROM;
+	if (!key || !from) throw new EmailNotConfiguredError();
+
+	const response = await fetch("https://api.resend.com/emails", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${key}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			from,
+			to: [message.to],
+			subject: message.subject,
+			html: message.html,
+			...(message.text ? { text: message.text } : {}),
+		}),
+	});
+
+	if (!response.ok) {
+		// The status and nothing else. A provider error body echoes the message
+		// it rejected, and an order email's body carries the order token — which
+		// `CLAUDE.md` forbids from reaching a log or an error under any
+		// circumstances, this one included.
+		throw new Error(`email: provider rejected the message (${response.status})`);
+	}
+}
+
+/**
+ * The adapter instance. The app imports this; swapping providers replaces the
+ * body above and nothing that imports this changes.
  */
 export const email: Email = {
-	send: notImplemented,
+	send: resendSend,
 };
