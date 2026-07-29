@@ -224,6 +224,18 @@ admin row, which is what makes *sign out everywhere* instant and the thirty-day 
 real. JWT expiry is ~15 minutes in the Supabase settings. Pinnable via a web app
 manifest on dashboard routes only — **no service worker.**
 
+**The login page is step one; the password is step two**, at `/dashboard/login/verify`.
+Link first, password second, because the reverse order binds the two halves with a
+cookie set before the mail is opened, and a mail app with its own in-app browser
+loses that binding and locks him out.
+
+**One development escape hatch: `DEV_PASSWORD_LOGIN=open`** renders a password-only
+form on the login page. It requires that value *and* a request over plain http, so
+it cannot open on the deployed site whatever is set there. It exists because Resend's
+free tier delivers only to the account holder's own address until a domain is
+verified, and local work should not wait on someone else's DNS. **Never set it as a
+Cloudflare secret.**
+
 **Re-auth defends ownership, not actions.** Changing the admin email or recovery
 address demands a fresh link. Confirming a price does not — a step-up on his daily
 job stops nobody already reading his mail.

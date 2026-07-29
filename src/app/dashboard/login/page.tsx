@@ -1,4 +1,6 @@
-import { requestLink } from "./actions";
+import { auth } from "@/lib/auth";
+
+import { requestLink, signInWithPassword } from "./actions";
 
 /**
  * Step one of getting in: ask for the link.
@@ -13,6 +15,7 @@ export default async function Login({
 	searchParams: Promise<{ sent?: string; e?: string; out?: string }>;
 }) {
 	const { sent, e, out } = await searchParams;
+	const passwordOnly = await auth.passwordOnlyOpen();
 
 	return (
 		<main>
@@ -51,6 +54,48 @@ export default async function Login({
 					/>
 					<button type="submit">Send the link</button>
 				</form>
+			)}
+
+			{/*
+			 * The development escape hatch, and it says so on the screen.
+			 *
+			 * R12b is password *and* link, both, every login, and this is not a
+			 * softening of it: `auth.passwordOnlyOpen()` is false unless
+			 * `DEV_PASSWORD_LOGIN=open` and the request came over plain http, so
+			 * this block cannot render on the deployed site and the action behind
+			 * it refuses there regardless. It is labelled rather than hidden so
+			 * that seeing it anywhere unexpected is immediately alarming.
+			 */}
+			{passwordOnly && (
+				<section>
+					<h2>Development sign-in</h2>
+					<p>
+						Password only, no link. This appears because <code>DEV_PASSWORD_LOGIN</code> is open
+						and this request is not over https. It never renders on the deployed site.
+					</p>
+					<form action={signInWithPassword} method="post" autoComplete="off">
+						<label htmlFor="dev-email">Email</label>
+						<input
+							id="dev-email"
+							name="email"
+							type="email"
+							required
+							autoComplete="off"
+							inputMode="email"
+						/>
+						<label htmlFor="dev-password">Password</label>
+						<input
+							id="dev-password"
+							name="password"
+							type="password"
+							required
+							autoComplete="new-password"
+							data-1p-ignore
+							data-lpignore="true"
+						/>
+						<button type="submit">Open the dashboard</button>
+					</form>
+				</section>
 			)}
 		</main>
 	);

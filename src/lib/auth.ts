@@ -169,6 +169,43 @@ export interface Auth {
 	completeLogin(tokenHash: string, password: string): Promise<LoginResult<Session>>;
 
 	/**
+	 * Whether this request may offer the password-only escape hatch below.
+	 *
+	 * The login page asks before rendering the second form, so a screen that
+	 * cannot be used does not appear. It is the same gate
+	 * {@link Auth.signInWithPassword} enforces, not a substitute for it — the
+	 * form being hidden is presentation, and the check that matters is the one
+	 * on the POST.
+	 */
+	passwordOnlyOpen(): Promise<boolean>;
+
+	/**
+	 * **The development escape hatch. Password only, no link.**
+	 *
+	 * R12b is *password and magic link, both, every login*, and this does not
+	 * change that: it is a way into a local or preview dashboard when the mail
+	 * rail is not delivering, which on a free Resend tier without a verified
+	 * domain is the normal state until the domain lands.
+	 *
+	 * **Two conditions, both required, both checked here** rather than at the
+	 * screen — an action calling this directly gets the same answer:
+	 *
+	 * 1. `DEV_PASSWORD_LOGIN` is exactly `open`, the same shape as the
+	 *    `PUBLIC_SITE` gate. Production never sets it.
+	 * 2. The request did not arrive over https.
+	 *
+	 * The second is the one that actually holds. The deployed site is https end
+	 * to end behind Cloudflare, so **the hatch cannot open there even if the
+	 * variable is set by mistake** — which is the failure a single env flag
+	 * would otherwise be one `wrangler secret put` away from.
+	 *
+	 * *The named cost:* it will not work against a deployed preview URL either,
+	 * because that is https too. Correct — a way in that skips a factor should
+	 * only exist where the database is a toy and the domain is `localhost`.
+	 */
+	signInWithPassword(email: string, password: string): Promise<LoginResult<Session>>;
+
+	/**
 	 * Redeem a link for an ownership change rather than for a session *(R12b)*.
 	 *
 	 * Sets a ten-minute cookie that {@link Auth.hasFreshLink} reads. **It grants
@@ -433,6 +470,40 @@ function failure(error: unknown): { ok: false; reason: LoginFailure } {
 	return { ok: false, reason: "unavailable" };
 }
 
+/**
+ * Write the session cookie and hand back the session.
+ *
+ * Shared by the two ways in so there is one definition of what a session is —
+ * the same TTL, the same flags, the same path, and the same discarding of
+ * everything Supabase just issued. A second copy of this is a second place for
+ * `httpOnly` to be forgotten.
+ */
+async function mintSession(adminId: string): Promise<Session> {
+	const now = Date.now();
+	const jar = await cookies();
+	jar.set(SESSION_COOKIE, await seal({ a: adminId, i: now, e: now + SESSION_TTL_MS, s: "session" }), {
+		httpOnly: true,
+		secure: await isSecureRequest(),
+		sameSite: "lax",
+		path: COOKIE_PATH,
+		maxAge: SESSION_TTL_MS / 1000,
+	});
+	jar.delete({ name: LINK_COOKIE, path: COOKIE_PATH });
+
+	return { adminId, issuedAt: new Date(now) };
+}
+
+/**
+ * The escape hatch's gate. See {@link Auth.signInWithPassword} for why it is
+ * two conditions and not one.
+ */
+async function passwordOnlyOpen(): Promise<boolean> {
+	const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+	const env = getCloudflareContext().env as unknown as Record<string, string | undefined>;
+	if (env.DEV_PASSWORD_LOGIN !== "open") return false;
+	return !(await isSecureRequest());
+}
+
 export const auth: Auth = {
 	async current(): Promise<Session | null> {
 		const jar = await cookies();
@@ -509,22 +580,32 @@ export const auth: Auth = {
 			// Both passed. Everything Supabase just issued is discarded: the
 			// session below is ours, and it is the one `sessions_valid_after`
 			// can reach.
-			const now = Date.now();
-			const jar = await cookies();
-			jar.set(
-				SESSION_COOKIE,
-				await seal({ a: admin.id, i: now, e: now + SESSION_TTL_MS, s: "session" }),
-				{
-					httpOnly: true,
-					secure: await isSecureRequest(),
-					sameSite: "lax",
-					path: COOKIE_PATH,
-					maxAge: SESSION_TTL_MS / 1000,
-				},
-			);
-			jar.delete({ name: LINK_COOKIE, path: COOKIE_PATH });
+			return { ok: true, value: await mintSession(admin.id) };
+		} catch (error) {
+			return failure(error);
+		}
+	},
 
-			return { ok: true, value: { adminId: admin.id, issuedAt: new Date(now) } };
+	passwordOnlyOpen,
+
+	async signInWithPassword(email, password): Promise<LoginResult<Session>> {
+		// The gate first, before anything is read or reached for. A closed hatch
+		// must not even tell the caller whether the address was his.
+		if (!(await passwordOnlyOpen())) return { ok: false, reason: "rejected" };
+
+		try {
+			const admin = await adminRow();
+			if (!admin || admin.email.toLowerCase() !== email.trim().toLowerCase()) {
+				return { ok: false, reason: "rejected" };
+			}
+
+			const secret = await supabase("/auth/v1/token?grant_type=password", "anon", {
+				email: admin.email,
+				password,
+			});
+			if (secret.status >= 400) return { ok: false, reason: "rejected" };
+
+			return { ok: true, value: await mintSession(admin.id) };
 		} catch (error) {
 			return failure(error);
 		}

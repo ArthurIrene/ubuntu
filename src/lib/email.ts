@@ -106,7 +106,16 @@ async function resendSend(message: EmailMessage): Promise<void> {
 
 	const key = env.RESEND_API_KEY;
 	const from = env.EMAIL_FROM;
-	if (!key || !from) throw new EmailNotConfiguredError();
+	if (!key || !from) {
+		// Which one, by name. A variable that is *present but empty* is the
+		// expensive version of this failure: `wrangler` lists it among the loaded
+		// bindings either way, so the deployment looks configured and the send
+		// silently never happens. Naming the empty one costs a line and saves
+		// that hunt.
+		const absent = [!key && "RESEND_API_KEY", !from && "EMAIL_FROM"].filter(Boolean).join(" and ");
+		console.error(`email: not configured — ${absent} is missing or empty`);
+		throw new EmailNotConfiguredError();
+	}
 
 	const response = await fetch("https://api.resend.com/emails", {
 		method: "POST",
@@ -123,13 +132,38 @@ async function resendSend(message: EmailMessage): Promise<void> {
 		}),
 	});
 
+	// Resend answers with a small JSON object either way: `{ id }` on success,
+	// `{ statusCode, name, message }` on refusal. Both are read, and only the
+	// fields named below are ever logged.
+	const body = (await response.json().catch(() => ({}))) as {
+		id?: string;
+		name?: string;
+		message?: string;
+	};
+
 	if (!response.ok) {
-		// The status and nothing else. A provider error body echoes the message
-		// it rejected, and an order email's body carries the order token — which
-		// `CLAUDE.md` forbids from reaching a log or an error under any
-		// circumstances, this one included.
+		// **`name` and `message`, never the body we sent.** Resend's error object
+		// describes its own refusal — `validation_error`, *you can only send
+		// testing emails to your own address* — and does not echo the html. That
+		// distinction is the whole reason this is loggable at all: an order
+		// email's html carries the order token, which `CLAUDE.md` forbids from
+		// reaching a log under any circumstances, this one included.
+		//
+		// Worth having, because the two failures that actually happen here are
+		// indistinguishable from the outside: an unverified sending domain, and
+		// the free tier refusing every recipient except the account holder's own
+		// address.
+		console.error(
+			`email: Resend refused the message (${response.status} ${body.name ?? "unknown"}): ${
+				body.message ?? "no message"
+			}`,
+		);
 		throw new Error(`email: provider rejected the message (${response.status})`);
 	}
+
+	// The id and nothing else — no recipient, no subject. It is what turns *no
+	// email arrived* into a question the provider's own dashboard can answer.
+	console.log(`email: Resend accepted the message (${body.id ?? "no id"})`);
 }
 
 /**
