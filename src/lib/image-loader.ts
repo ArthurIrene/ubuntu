@@ -10,8 +10,6 @@
 // `next/image` is kept for `srcset`, lazy loading and layout stability, and for
 // nothing else.
 
-import { storage } from "./storage";
-
 /**
  * The three derivatives, in pixels *(R8)*.
  *
@@ -39,7 +37,13 @@ export function nearestDerivative(width: number): Derivative {
 	return DERIVATIVES.find((size) => size >= width) ?? DERIVATIVES[DERIVATIVES.length - 1];
 }
 
-/** The object key for one derivative of a content-hashed base key. */
+/**
+ * One derivative of a content-hashed base, as a suffix on the base.
+ *
+ * Used for the object key when a derivative is stored or deleted, and for the URL
+ * when one is served — the same string in both places, because the public URL is
+ * the key under a bucket prefix and nothing else.
+ */
 export function derivativeKey(base: string, width: number): string {
 	return `${base}/${width}.webp`;
 }
@@ -47,11 +51,21 @@ export function derivativeKey(base: string, width: number): string {
 /**
  * The loader `next/image` calls.
  *
+ * **`src` is the public URL of the content-hashed base**, not the storage key —
+ * and that is the whole reason this file imports nothing. `next/image` is a
+ * client component, so Next bundles this loader into the browser and runs it
+ * again on hydration to compute the same `srcset`. A loader that reached for the
+ * storage adapter would be reaching for `getCloudflareContext()` and the
+ * service-role key in a browser, which fails in the good case and leaks in the
+ * bad one. So the Server Component resolves the base URL through the adapter —
+ * where the adapter belongs — and this appends the derivative. String work, both
+ * sides, no environment.
+ *
  * `quality` is accepted and ignored: quality was decided in the browser when
  * the file was encoded, and there is nothing here that could apply a second
  * one. Taking the parameter and doing nothing with it is what keeps
  * `next/image` working without implying a capability that does not exist.
  */
 export default function imageLoader({ src, width }: { src: string; width: number }): string {
-	return storage.publicUrl(derivativeKey(src, nearestDerivative(width)));
+	return derivativeKey(src, nearestDerivative(width));
 }

@@ -24,8 +24,7 @@ export const rw: Translation = {
 		commissions: null,
 		making: null,
 		story: null,
-		home: null,
-		skip: null,
+		label: null,
 	},
 
 	footer: {
@@ -77,7 +76,6 @@ export const rw: Translation = {
 		kicker: null,
 		bridge: null,
 		empty: null,
-		priceless: null,
 	},
 
 	piece: {

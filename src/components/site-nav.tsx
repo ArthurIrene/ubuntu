@@ -30,7 +30,7 @@ export default function SiteNav({ locale, copy }: { locale: Locale; copy: Conten
 	return (
 		<header>
 			<Link href={path(locale, "home")}>{copy.wordmark}</Link>
-			<nav aria-label={copy.nav.home}>
+			<nav aria-label={copy.nav.label}>
 				<ul>
 					{ITEMS.map((item) => (
 						<li key={item.route}>

@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import PieceCard from "@/components/piece-card";
+import { fill } from "@/content";
+import { siteSettings, windowCards } from "@/lib/catalogue";
 import { pageContext } from "@/lib/page";
-import { path } from "@/lib/routes";
+import { path, piecePath } from "@/lib/routes";
+
+/**
+ * Read on every request, not prerendered at build time.
+ *
+ * The window display is a dashboard field: he changes what a stranger meets first
+ * whenever he likes, and a page baked at deploy time would show the previous
+ * choice until someone deployed again. Warm reads through Hyperdrive are ~100ms,
+ * and whether any of this earns a cache is a Phase 7 question with a real
+ * connection in front of it — not a guess made here.
+ */
+export const dynamic = "force-dynamic";
 
 // The landing route. No robots directive of its own, so it inherits the
 // layout's: English indexable, Kinyarwanda noindex until the switcher flips.
@@ -29,6 +43,9 @@ export async function generateMetadata({
  */
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
 	const { locale, copy } = await pageContext(params);
+	const [window, settings] = await Promise.all([windowCards(locale), siteSettings(locale)]);
+	// The ritual section's one door, taken from what he has chosen to show.
+	const door = window[0] ?? null;
 
 	return (
 		<main>
@@ -46,13 +63,52 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
 				<p>{copy.home.whoWeAre}</p>
 			</section>
 
-			{/* 3. The window display arrives here with the catalogue query. */}
+			{/*
+			 * 3. The window display — **his hand choosing what a stranger meets
+			 * first** *(R1, R10)*, in the order he put them in. Emphatically not the
+			 * four most recent: the collection page already answers newest-first, and
+			 * it is changeable at will so nothing is ever made artificially scarce.
+			 */}
+			<section>
+				<p>{copy.home.collectionKicker}</p>
+				<h2>{settings.collectionTheme ?? copy.home.collectionTheme}</h2>
 
-			{/* 4. The ritual. */}
+				{window.length === 0 ? (
+					<p>{copy.home.windowEmpty}</p>
+				) : (
+					<ul>
+						{window.map((card, index) => (
+							<PieceCard
+								key={card.slug}
+								locale={locale}
+								card={card}
+								sizes="(min-width: 40rem) 50vw, 100vw"
+								priority={index < 2}
+							/>
+						))}
+					</ul>
+				)}
+
+				<p>{copy.home.bridge}</p>
+				<p>
+					<Link href={path(locale, "collection")}>{copy.home.collectionDoor}</Link>
+				</p>
+			</section>
+
+			{/* 4. The ritual, with one door into a real piece. */}
 			<section>
 				<h2>{copy.home.ritualHeading}</h2>
 				<p>{copy.home.ritual}</p>
 				<p>{copy.home.ritualClose}</p>
+				{/* The door names the piece it opens, so it is never a promise the
+				    catalogue cannot keep — with nothing live there is no door. */}
+				{door && (
+					<p>
+						<Link href={piecePath(locale, door.slug)}>
+							{fill(copy.home.ritualDoor, { piece: door.name })}
+						</Link>
+					</p>
+				)}
 			</section>
 
 			{/* 5. The making, condensed. The full page is its own route. */}

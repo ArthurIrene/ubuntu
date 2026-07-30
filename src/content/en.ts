@@ -29,8 +29,9 @@ export const en = {
 		commissions: "Only yours",
 		making: "The making",
 		story: "Our story",
-		home: "Home",
-		skip: "Skip to the content",
+		// What a screen reader calls this list. Read aloud to a customer, so it is
+		// a keyed string like every other one.
+		label: "Pages",
 	},
 
 	footer: {
@@ -109,8 +110,6 @@ export const en = {
 		// Never scarcity, and never an apology. The catalogue is small because the
 		// hands are two.
 		empty: "He is stitching the first pieces. They will be here as they are finished.",
-		// The card price is the ordinary configuration, not a starting price *(R3)*.
-		priceless: "Ask him what it costs.",
 	},
 
 	piece: {
