@@ -329,7 +329,6 @@ export const en = {
 		// The makers list is an FK table, not a typed string, because this page
 		// names and celebrates them *(R16)*. Faces and bios are Phase 8.
 		makersEmpty: "One pair of hands, for now. His.",
-		makerName: "[name]",
 
 		abantuHeading: "Abantu",
 		abantu:

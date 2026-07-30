@@ -164,7 +164,6 @@ export const rw: Translation = {
 		makerHeading: null,
 		maker: null,
 		makersEmpty: null,
-		makerName: null,
 		abantuHeading: null,
 		abantu: null,
 		collectionDoor: null,
