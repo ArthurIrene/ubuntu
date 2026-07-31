@@ -8,7 +8,7 @@ import {
 	band,
 	isMeasurementKey,
 	MEASUREMENTS,
-	SIZE_CHART_VERSION,
+	RANGES_VERSION,
 	toCanonical,
 } from "@/content/measurements";
 import { getDb, schema } from "@/db/client";
@@ -431,7 +431,9 @@ export async function recordFit(form: FormData): Promise<void> {
 			garmentTypeId,
 			source,
 			unit,
-			sizeChartVersion: SIZE_CHART_VERSION,
+			// The grouping label. **The evidence is the band values snapshotted
+			// onto each measurement row below**, not this integer.
+			sizeChartVersion: String(RANGES_VERSION),
 			standardSize: text(form, "standardSize") || null,
 			// **Age at the time of the order, as a number, never a date of birth**
 			// *(R13a)*. A birth date ages by itself and identifies; a number does

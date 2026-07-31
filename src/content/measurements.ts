@@ -16,15 +16,27 @@
 // is here is a strong draft in his voice, never `Lorem ipsum` and never empty.
 
 /**
- * The version of *our own stated measurements* that was on the page.
+ * The ranges version — **a grouping label, not the evidence.**
  *
- * The policy distributes liability three ways against that phrase, and it is
- * meaningless without a version — *our own stated measurements* means the ones
- * stated **on the day** *(R7)*. **Bump this whenever a label, an instruction or
- * the size chart changes**, never when a guardrail band moves, because the
- * bands are snapshotted per measurement already.
+ * The evidence is the snapshot: every fit measurement stores the literal band
+ * values that were in force when the number was typed, so **a dispute is
+ * settled by reading the record itself** and never by looking a version up in a
+ * table that may since have been edited. That is what makes the record
+ * self-contained *(R7)*, and it is why this integer can be as dumb as it is.
+ *
+ * Starts at 1. **The increment-on-band-edit machinery is deliberately not
+ * built** — it is filed for Phase 5. Until then this is a label that groups
+ * records taken under the same regime, and it gets real later.
+ *
+ * ## Where it is stored, and why that is not a new column
+ *
+ * It is written into `fit_records.size_chart_version`, which is the text column
+ * the schema has carried since the first migration for exactly this purpose.
+ * Adding a dedicated `ranges_version` integer beside it would be a migration,
+ * and **Phase 4 generates none** — the schema carries all of this from Gate 0.
+ * Renaming the column to match is a Phase 5 decision, not a build step.
  */
-export const SIZE_CHART_VERSION = "2026-07-a";
+export const RANGES_VERSION = 1;
 
 /** Millimetres for every length, grams for a weight. Integers, like money. */
 export type CanonicalUnit = "mm" | "g";
@@ -196,6 +208,11 @@ export function band(
 	return "plausible";
 }
 
-/** The soft warning, exactly as `ubuntu-copy.md` §4 writes it. Do not improve it. */
-export const UNLIKELY_WARNING =
-	"That's outside what we usually see. Check it if you can — and if it's right, leave it. He'll see it before anything is cut.";
+// The two guardrail sentences used to live here as English literals. They are
+// now keyed in both locales under `order.fit` in `src/content/`, because a
+// customer who ordered in Kinyarwanda must read them in Kinyarwanda — and
+// because these two are the strings the fit record's evidence hangs off.
+//
+// **They must never blur into each other.** One says *this looks like a
+// mistake*; the other says *unusual, but we'll build to it*. See the note on
+// each in `src/content/en.ts`.
