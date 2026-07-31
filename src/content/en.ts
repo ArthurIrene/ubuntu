@@ -341,6 +341,237 @@ export const en = {
 		commissionsDoor: "Or bring us a scene of your own.",
 	},
 
+	/**
+	 * The order flow: the two forms that create one, and the private page a
+	 * customer reaches with their token.
+	 *
+	 * **Every string here is keyed, including the refusals** *(R14)*. A validation
+	 * message is brand voice like any other — there is no "just a label" — and an
+	 * inline literal is the string that answers a Kinyarwanda reader in English at
+	 * the exact moment something has already gone wrong.
+	 */
+	order: {
+		form: {
+			// The order block on a piece's own page. The button above it is fixed and
+			// is never anything else.
+			detailsHeading: "How he reaches you",
+			name: "Your name",
+			// **Both required** *(R5)*. Email is the automated rail and the permanent
+			// address of your order link; phone is delivery and his own hand.
+			email: "Email",
+			emailHint: "Your order link goes here, and stays here.",
+			phone: "Phone",
+			phoneHint: "For delivery, and so he can reach you himself.",
+
+			channelHeading: "How we reach you",
+			// Said rather than discovered *(R11)*.
+			channelNote:
+				"We'll message you on WhatsApp, and email you a copy you can always come back to.",
+			channelEmail: "Email is fine",
+			channelWhatsapp: "WhatsApp",
+
+			// **Position in the queue, never speed** *(R4)*. This whole block renders
+			// only while the global queue offset is non-zero — with an empty line
+			// there is no position to sell, and offering one would be the first
+			// scarcity copy on the site.
+			priorityHeading: "Where you sit in the line",
+			priority: "Move nearer the front of the line — {amount}.",
+			priorityNote:
+				"Every piece is stitched with the same unhurried care. What this changes is " +
+				"your place in the queue, never how fast the needle moves.",
+
+			// Shown where the garment type has no measurement list configured, so
+			// there is nothing to ask. A real path *(R7)*, not a stub: he can enter
+			// the numbers himself, and the fit check still stands in front of the
+			// cloth being cut *(R9c)*.
+			fitLater:
+				"He'll settle the numbers with you once he has confirmed your piece, and nothing " +
+				"is cut until they are right.",
+		},
+
+		/**
+		 * The fit fork *(R7)*.
+		 *
+		 * **Measurements are the urged path, and therefore taught.** A size is a
+		 * real choice and not a lesser one. The two prompts live under `piece`
+		 * because they are fixed strings `rules-copy.md` writes out; everything
+		 * here is the machinery around them.
+		 */
+		fit: {
+			pathHeading: "How should it be cut?",
+			pathMeasurements: "Cut it to my measurements",
+			pathSize: "Use a standard size",
+
+			// **Who took the numbers is what decides liability** *(R7, R13a)*, so it
+			// is asked plainly rather than inferred from anything.
+			whoHeading: "Whose body are these numbers from?",
+			whoSelf: "Mine",
+			whoGuardian: "Someone else's — I'm measuring them",
+			whoTailor: "A tailor measured them",
+
+			// **A child is never an entity** *(R13a)*: no name, no birthday, no row.
+			// The age is a number and the copy says why, because a parent typing it
+			// deserves to know what is and is not being kept.
+			age: "How old are they, in years",
+			ageNote:
+				"A number of years, never a birthday. We don't record a child as a person — only " +
+				"the numbers needed to cut the cloth, and they go if you ask us to forget you.",
+
+			sizeHeading: "Your size",
+			sizeNote:
+				"He checks it against your height and weight himself before anything is cut. We " +
+				"never guess a size from them.",
+
+			unitCm: "cm",
+			unitKg: "kg",
+
+			checkHeading: "One number to check",
+			checkIntro:
+				"Nothing is wrong. One of your numbers is outside what we usually see, and he'd " +
+				"rather ask than cut the cloth and find out.",
+			acknowledged: "You've confirmed this one.",
+
+			/*
+			 * ── THE TWO GUARDRAIL SENTENCES ─────────────────────────────────────
+			 *
+			 * **These two must never blur into each other.** They are the whole of
+			 * R7's soft-guardrail decision as a customer experiences it, and they
+			 * say opposite things:
+			 *
+			 *   `impossible`  — *this looks like a mistake.* A slip of the finger,
+			 *                   or the wrong unit. It is the only hard stop, and it
+			 *                   is aimed at the typing, never at the body.
+			 *   `implausible` — *unusual, but we'll build to it.* It welcomes a
+			 *                   real body that happens to be outside the usual, and
+			 *                   it must NOT read as a soft rejection.
+			 *
+			 * **A hard block on a real body is the site telling someone their body
+			 * is wrong**, which is the sentence the whole three-band shape exists
+			 * to avoid writing. Do not improve either of these.
+			 */
+			impossible:
+				"That number looks off to us — it may be a slip of the finger, or centimetres " +
+				"where we were expecting millimetres. Would you take another look?",
+			implausible:
+				"That's outside what we usually see — which is often just fine. If it's right, " +
+				"tick to confirm and we'll make it to those numbers.",
+			acknowledge: "It's right — make it to these numbers",
+
+			// Not guardrails. Ordinary form refusals, and worded as such.
+			missing: "We still need {label}.",
+			unreadable: "{label} needs to be a number.",
+		},
+
+		errors: {
+			heading: "That didn't go through.",
+			name: "We need a name to call you.",
+			email: "That address doesn't look right — and it's where your order link goes.",
+			phone: "We need a phone number too. It's how he reaches you about delivery.",
+			scene: "Tell him the scene. It's the whole of what he's making.",
+			piece: "That piece isn't available to ask for right now.",
+			channel: "Tell us where to write to you.",
+			fit: "One of the numbers needs another look — it's marked below.",
+			unknown: "Something went wrong on our side. Try once more, or talk to us.",
+		},
+
+		/**
+		 * The customer-facing words, exactly as `rules-copy.md` fixes them.
+		 *
+		 * The dashboard has its own copy of these in `src/lib/order-state.ts`,
+		 * deliberately: that one is English-only because the dashboard is, and it
+		 * is pure and tested with no reach into this file. These are the ones a
+		 * customer reads, in the language their order was placed in.
+		 */
+		status: {
+			requested: "Requested",
+			confirmed: "Confirmed",
+			// Commissions only, derived from the design fee landing *(R6)*.
+			inDesign: "In design",
+			paid: "Paid",
+			inTheMaking: "In the making",
+			onItsWay: "On its way",
+			delivered: "Delivered",
+			declined: "Declined",
+			lapsed: "Set aside",
+			cancelled: "Stopped",
+		},
+
+		/** One line under the status, saying what that word means today. */
+		state: {
+			// Fixed by `rules-copy.md`. Do not improve it.
+			requested:
+				"Your request is with him. He reads each one himself and will confirm your piece " +
+				"and final price within {days} days. Nothing is owed until he does.",
+			confirmed: "He has confirmed your piece and your price. Payment starts the making.",
+			inDesign: "He is drawing your scene. He'll bring it back to you within {days} days.",
+			// Fixed by `rules-copy.md`. Fires on his confirmation of the payment, never
+			// on the customer's word for it.
+			paid: "Your payment buys the fabric and his hours. The needle starts when it arrives.",
+			inTheMaking: "It is on his table. He has begun.",
+			onItsWay: "It has left his hands and is on its way to you.",
+			// **Delivered carries the welcome into Abantu** *(R4)*.
+			delivered: "It's yours. Welcome to Abantu.",
+			declined: "He has written to you about this one himself.",
+			lapsed: "This one has been set aside. If you still want the piece, talk to us.",
+			cancelled: "This order was stopped. He'll have written to you.",
+		},
+
+		page: {
+			title: "Your order — Ubuntu",
+			heading: "Your order",
+			// A commission before the design is agreed. **The emptiness is the
+			// product** *(R6)* — no photo, no price, their own words back to them.
+			commissionPlaceholder: "The piece he is drawing for you",
+			yourWordsHeading: "What you asked him for",
+			choicesHeading: "What you chose",
+
+			moneyHeading: "Money",
+			// A gate with no figure yet. He confirms the price; we never guess it.
+			moneyPending: "He'll confirm your price, and you'll hear from him when he has.",
+			owed: "Owed now",
+			received: "Received",
+			gatePiece: "The piece",
+			gateDesignFee: "The design fee",
+			gateCutting: "When the cloth is cut",
+			gateBalance: "The balance, on completion",
+
+			// **Report-then-confirm** *(R4)*. The claim is a payment row awaiting his
+			// eye and never an order state.
+			reportHeading: "Have you paid?",
+			reportButton: "I've paid",
+			reportReference: "The reference, if you have one",
+			// The in-between view: honest and un-anxious. No spinner, no "pending".
+			reported:
+				"Thank you — you've told us your payment is on its way. He checks each one " +
+				"himself, so give him a little time to see it land. Nothing more is needed from " +
+				"you; we'll write the moment it's confirmed.",
+
+			// **The one place measurements appear, on the whole site** *(R7, R11)*.
+			fitHeading: "The numbers it is cut to",
+			fitNote:
+				"These live here and nowhere else. They are never in an email and never in a " +
+				"message.",
+			fitEmpty: "No numbers yet. He'll settle them with you before anything is cut.",
+			fitSourceSelf: "Measured by you.",
+			fitSourceGuardian: "Measured by you, for someone else.",
+			fitSourceTailor: "Measured by a tailor.",
+			fitSourceStandard: "A size off the chart, which he checks himself before cutting.",
+			fitSourceOurs: "Measured by us.",
+			fitAge: "Age at the time of the order: {age}.",
+			fitChecked: "He has checked these against the piece.",
+
+			photosHeading: "From his hands",
+			photosEmpty: "Photographs will appear here as he works.",
+
+			keepHeading: "Keep this link",
+			// **No expiry, ever** *(R5)*. A dead link is the site forgetting someone.
+			keep:
+				"This page is yours and it does not expire. Bookmark it — there is no password " +
+				"and no account to remember.",
+			talk: "Talk to us",
+		},
+	},
+
 	contact: {
 		title: "Talk to us — Ubuntu",
 		heading: "Talk to us",

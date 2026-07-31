@@ -170,6 +170,153 @@ export const rw: Translation = {
 		commissionsDoor: null,
 	},
 
+	/**
+	 * The order flow. **Nothing here is a nice-to-have translation.**
+	 *
+	 * `orders.locale` is set at creation and read by every email, so a customer
+	 * who ordered in Kinyarwanda reads this page and these refusals in
+	 * Kinyarwanda for the life of their order — which outlasts the flip bar. The
+	 * fallback is silent and correct *(R14)*; it is also the one place on the
+	 * site where falling back means someone reads a language they did not choose
+	 * while looking at their own measurements.
+	 */
+	order: {
+		form: {
+			detailsHeading: null,
+			name: null,
+			email: null,
+			emailHint: null,
+			phone: null,
+			phoneHint: null,
+			channelHeading: null,
+			channelNote: null,
+			channelEmail: null,
+			channelWhatsapp: null,
+			priorityHeading: null,
+			priority: null,
+			priorityNote: null,
+			fitLater: null,
+		},
+		fit: {
+			pathHeading: null,
+			pathMeasurements: null,
+			pathSize: null,
+			whoHeading: null,
+			whoSelf: null,
+			whoGuardian: null,
+			whoTailor: null,
+			age: null,
+			ageNote: null,
+			sizeHeading: null,
+			sizeNote: null,
+			unitCm: null,
+			unitKg: null,
+			checkHeading: null,
+			checkIntro: null,
+			acknowledged: null,
+
+			/*
+			 * ── DRAFT · NEEDS A NATIVE READER BEFORE IT SHIPS ───────────────────
+			 *
+			 * **The first two non-null values in this file, and they are drafts.**
+			 * They are here rather than null because falling back to English on
+			 * these two is worse than falling back anywhere else: they are the
+			 * sentences a customer reads at the moment the form questions a number
+			 * about their own body, and the whole point of the wording is tone.
+			 *
+			 * Written in the same *spirit* as the English, not translated literally
+			 * — the English leans on idiom ("a slip of the finger") that does not
+			 * carry. **Both must be read by one of R14's two Kinyarwanda readers
+			 * before the switcher flips**, and they are on the flip bar as their
+			 * own line.
+			 *
+			 * The distinction the English draws must survive translation:
+			 * `impossible` blames the typing, `implausible` welcomes the body.
+			 */
+			impossible:
+				"Uyu mubare usa nk'utameze neza — wenda hari aho wibeshye wandika, cyangwa " +
+				"wanditse muri santimetero aho twari twiteze milimetero. Wawongera kuwureba?",
+			implausible:
+				"Uyu mubare si uwo dukunze kubona — ariko akenshi nta kibazo kirimo. Niba ari " +
+				"wo, wemeze tubikorere kuri iyo mibare.",
+			acknowledge: "Ni wo — mubikorere kuri iyi mibare",
+
+			missing: null,
+			unreadable: null,
+		},
+		errors: {
+			heading: null,
+			name: null,
+			email: null,
+			phone: null,
+			scene: null,
+			piece: null,
+			channel: null,
+			fit: null,
+			unknown: null,
+		},
+		status: {
+			requested: null,
+			confirmed: null,
+			// **His sign-off is pending on the English word too** *(R6)*, so this
+			// key waits on the answer rather than on the translation.
+			inDesign: null,
+			paid: null,
+			inTheMaking: null,
+			onItsWay: null,
+			delivered: null,
+			declined: null,
+			lapsed: null,
+			cancelled: null,
+		},
+		state: {
+			requested: null,
+			confirmed: null,
+			inDesign: null,
+			paid: null,
+			inTheMaking: null,
+			onItsWay: null,
+			delivered: null,
+			declined: null,
+			lapsed: null,
+			cancelled: null,
+		},
+		page: {
+			title: null,
+			heading: null,
+			commissionPlaceholder: null,
+			yourWordsHeading: null,
+			choicesHeading: null,
+			moneyHeading: null,
+			moneyPending: null,
+			owed: null,
+			received: null,
+			gatePiece: null,
+			gateDesignFee: null,
+			gateCutting: null,
+			gateBalance: null,
+			reportHeading: null,
+			reportButton: null,
+			reportReference: null,
+			reported: null,
+			fitHeading: null,
+			fitNote: null,
+			fitEmpty: null,
+			fitSourceSelf: null,
+			fitSourceGuardian: null,
+			fitSourceTailor: null,
+			fitSourceStandard: null,
+			fitSourceOurs: null,
+			fitAge: null,
+			fitChecked: null,
+			photosHeading: null,
+			photosEmpty: null,
+			keepHeading: null,
+			keep: null,
+			talk: null,
+		},
+	},
+
 	contact: {
 		title: null,
 		heading: null,

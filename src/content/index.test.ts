@@ -19,8 +19,26 @@ describe("content", () => {
 	});
 
 	it("falls back to English for every key not yet translated", () => {
-		// rw.ts is entirely null today, so Kinyarwanda resolves to English.
-		expect(content("rw")).toEqual(en);
+		// rw.ts was entirely null until the fit fork landed. The three guardrail
+		// strings are the first real Kinyarwanda on the site — deliberately, because
+		// falling back to English on those two sentences is worse than falling back
+		// anywhere else: they are what a customer reads at the moment the form
+		// questions a number about their own body. Everything else still resolves
+		// to English, and this asserts exactly that.
+		const translated = leaves(rw)
+			.filter(([, value]) => value !== null)
+			.map(([key]) => key);
+
+		expect(translated).toEqual([
+			"order.fit.impossible",
+			"order.fit.implausible",
+			"order.fit.acknowledge",
+		]);
+
+		for (const [key, value] of leaves(content("rw"))) {
+			if (translated.includes(key)) continue;
+			expect(value, key).toEqual(new Map(leaves(en)).get(key));
+		}
 	});
 
 	it("never yields a null or undefined value, at any depth", () => {
