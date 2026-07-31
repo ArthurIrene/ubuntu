@@ -205,6 +205,40 @@ describe("queueActions — membership is gate-based", () => {
 		expect(queueActions(recovered).some((a) => a.key === "resend_failed")).toBe(false);
 	});
 
+	it("puts a bounce in his queue even though the send was accepted first", () => {
+		// **The order these arrive in is the whole rule.** A bounce always
+		// *follows* a successful hand-off: the provider accepted the message, and
+		// the recipient's server rejected it minutes later. A rule that asks
+		// "was this ever sent?" is therefore always answered yes exactly when a
+		// bounce lands, and the row that should appear never does — which is the
+		// silence R11 built the webhook to end.
+		const bounced = order({
+			events: [
+				event("requested"),
+				event("message_sent", "email:confirmed"),
+				event("message_failed", "email:confirmed"),
+			],
+		});
+		expect(queueActions(bounced)).toContainEqual({
+			key: "resend_failed",
+			mode: "fact",
+			emailKey: "confirmed",
+		});
+	});
+
+	it("offers one row however many times a message has bounced", () => {
+		const twice = order({
+			events: [
+				event("requested"),
+				event("message_sent", "email:confirmed"),
+				event("message_failed", "email:confirmed"),
+				event("message_sent", "email:confirmed"),
+				event("message_failed", "email:confirmed"),
+			],
+		});
+		expect(queueActions(twice).filter((a) => a.key === "resend_failed")).toHaveLength(1);
+	});
+
 	it("stops asking for anything once an order is declined", () => {
 		const facts = order({ events: [event("requested"), event("declined")] });
 		expect(queueActions(facts)).toEqual([]);

@@ -335,6 +335,35 @@ function sentOn(facts: OrderFacts, channel: "email" | "whatsapp"): Set<string> {
 }
 
 /**
+ * The last thing that happened to each message on a channel — sent, or failed.
+ *
+ * A message can be sent, bounce, be resent by hand and bounce again, and only
+ * the newest outcome decides whether he still has something to do about it. Ties
+ * on the timestamp fall to the later event in the log, because `at` is recorded
+ * to the second and two events inside one second are still ordered by the order
+ * they were appended in.
+ */
+function latestPerKey(
+	facts: OrderFacts,
+	channel: "email" | "whatsapp",
+): Map<string, "message_sent" | "message_failed"> {
+	const latest = new Map<string, { at: Date; type: "message_sent" | "message_failed" }>();
+
+	for (const event of facts.events) {
+		if (event.type !== "message_sent" && event.type !== "message_failed") continue;
+		if (!event.note) continue;
+
+		const [where, key] = event.note.split(":");
+		if (where !== channel || !key) continue;
+
+		const held = latest.get(key);
+		if (!held || event.at >= held.at) latest.set(key, { at: event.at, type: event.type });
+	}
+
+	return new Map([...latest].map(([key, held]) => [key, held.type]));
+}
+
+/**
  * Everything waiting on him for this one order. **Complete, never truncated.**
  *
  * An order can legitimately produce more than one row — a payment to record and
@@ -347,11 +376,17 @@ export function queueActions(facts: OrderFacts): QueueAction[] {
 	// A failed send outranks everything: the customer never saw the message, and
 	// without this row a bounced Confirmed reads as a stranger who changed their
 	// mind *(R11)*.
+	//
+	// **The question is what happened to this message *last*, not whether it was
+	// ever sent.** That distinction is the whole rule, and getting it wrong is
+	// silent: a bounce always *follows* a successful hand-off, because a bounce
+	// means the provider accepted the message and the recipient's server rejected
+	// it afterwards. Asking "was this key ever sent?" is therefore always
+	// answered yes at the moment a bounce lands, and the row that should appear
+	// never does — which is exactly the silence R11 built the webhook to end.
 	const sentByEmail = sentOn(facts, "email");
-	for (const event of facts.events) {
-		if (event.type !== "message_failed" || !event.note) continue;
-		const [, key] = event.note.split(":");
-		if (key && !sentByEmail.has(key)) {
+	for (const [key, outcome] of latestPerKey(facts, "email")) {
+		if (outcome === "message_failed") {
 			actions.push({ key: "resend_failed", mode: "fact", emailKey: key as EmailKey });
 		}
 	}
