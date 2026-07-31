@@ -11,11 +11,11 @@
 // the customer never sees the price, never pays, and lands in Lapsed looking
 // exactly like ordinary attrition.
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/db/client";
 import { orderEmail, whatsappDraft, type EmailKey, type OrderEmailVars } from "@/emails/order";
-import { email as mailer } from "@/lib/email";
+import { email as mailer, EmailNotConfiguredError } from "@/lib/email";
 import { messageNote } from "@/lib/order-state";
 import { orderLink } from "@/lib/origin";
 import type { Locale } from "@/lib/locale";
@@ -58,6 +58,38 @@ async function replyTimeDays(): Promise<number | null> {
 	return row?.replyTimeDays ?? null;
 }
 
+/**
+ * What a message carries out to the provider so that a bounce can find its way
+ * home *(R11)*.
+ *
+ * A bounce arrives on a webhook hours later knowing only what the message told
+ * it. Without this the only route back is the recipient address, and a customer
+ * with two open orders makes that a guess — which is precisely the case where a
+ * missed *couldn't reach her* costs the most.
+ *
+ * `orderId_emailKey`. The order id is a UUID and contains no underscore, so the
+ * first one splits it; the key contains several, so nothing else would. Both
+ * halves are already restricted to the characters a provider tag permits.
+ *
+ * **Never the token, never a name, never a measurement.** It travels to a third
+ * party and comes back through a URL anyone can POST to.
+ */
+export function messageReference(orderId: string, key: EmailKey): string {
+	return `${orderId}_${key}`;
+}
+
+/** The reference, read back. Null when it is not one of ours. */
+export function parseMessageReference(
+	reference: string,
+): { orderId: string; key: EmailKey } | null {
+	const split = reference.indexOf("_");
+	if (split <= 0 || split === reference.length - 1) return null;
+	return {
+		orderId: reference.slice(0, split),
+		key: reference.slice(split + 1) as EmailKey,
+	};
+}
+
 export interface SendOptions {
 	/** His personal note, on the four emails that carry one *(R9d)*. */
 	note?: string | null;
@@ -88,7 +120,10 @@ export async function sendOrderEmail(
 	if (!order || !order.customerEmail || order.redactedAt) return false;
 
 	const vars = await buildVars(order, options);
-	const message = orderEmail(key, order.locale as Locale, order.customerEmail, vars);
+	const message = {
+		...orderEmail(key, order.locale as Locale, order.customerEmail, vars),
+		reference: messageReference(orderId, key),
+	};
 
 	try {
 		await mailer.send(message);
@@ -99,7 +134,18 @@ export async function sendOrderEmail(
 			note: messageNote("email", key),
 		});
 		return true;
-	} catch {
+	} catch (error) {
+		// **Three outcomes, not two.** *Nothing was wired up* is a different fact
+		// from *the provider refused this message*, and the adapter throws a named
+		// error so that this line can tell them apart *(email.ts)*.
+		//
+		// A missing key is a deployment problem: it is not the customer's address
+		// that failed, and filing it as a bounce would put a *couldn't reach them*
+		// row in his queue for every order on a site whose mail was never
+		// configured — which is the queue crying wolf on day one, and the fastest
+		// way to teach him to stop reading it.
+		if (error instanceof EmailNotConfiguredError) return false;
+
 		// The error itself is deliberately not carried into the log. A provider
 		// error echoes the message it rejected, and the message carries the token.
 		await db.insert(schema.orderEvents).values({
@@ -110,6 +156,49 @@ export async function sendOrderEmail(
 		});
 		return false;
 	}
+}
+
+/**
+ * A bounce, come back *(R11)*.
+ *
+ * **A failed send becomes a row in his queue, never silence.** Without it a
+ * bounced Confirmed reads as a stranger who changed their mind: the customer
+ * never sees the price, never pays, and lands in Lapsed looking exactly like
+ * ordinary attrition — and the one recovery that works is the phone number the
+ * form already required.
+ *
+ * There is no bounce column. R11 called for *one webhook, one column*, and the
+ * append-only log *is* that column: `message_failed` already exists as an event
+ * type, `queueActions` already turns one into a `resend_failed` row, and a
+ * second place recording the same fact is a second place to disagree with it.
+ *
+ * Idempotent, because a webhook is delivered at least once. A provider that
+ * retries three times must not produce three identical rows in a queue whose
+ * whole claim is that it is exactly what is waiting on him.
+ */
+export async function recordBounce(orderId: string, key: EmailKey): Promise<void> {
+	const db = await getDb();
+	const note = messageNote("email", key);
+
+	const [already] = await db
+		.select({ id: schema.orderEvents.id })
+		.from(schema.orderEvents)
+		.where(
+			and(
+				eq(schema.orderEvents.orderId, orderId),
+				eq(schema.orderEvents.type, "message_failed"),
+				eq(schema.orderEvents.note, note),
+			),
+		)
+		.limit(1);
+	if (already) return;
+
+	await db.insert(schema.orderEvents).values({
+		orderId,
+		type: "message_failed",
+		actor: "system",
+		note,
+	});
 }
 
 async function buildVars(
