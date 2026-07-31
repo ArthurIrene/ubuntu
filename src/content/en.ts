@@ -205,13 +205,9 @@ export const en = {
 		scenePrompt: "What is it you want stitched, and why does it matter to you?",
 		garment: "Which garment do you imagine it on",
 		garmentUnsure: "Not sure — advise me",
-		name: "Your name",
-		contact: "How he reaches you",
-		email: "Email",
-		phone: "Phone",
 		anythingElse: "Anything he should know",
-		channelHeading: "How we reach you",
-		channelNote: "We'll message you on WhatsApp, and email you a copy you can always come back to.",
+		// Who they are, where he writes, and which channel they chose are the
+		// same fields on both order forms and are keyed once, under `order.form`.
 		// **Never anything else.**
 		button: "Send it to him.",
 		// Reply time is qualitative here and numeric everywhere else. This does

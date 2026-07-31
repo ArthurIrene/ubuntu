@@ -59,7 +59,14 @@ export interface PieceDetail extends PieceCard {
 	makingDays: number | null;
 	/** Every photograph, in his order — the card image is the first of these. */
 	images: CardImage[];
-	options: { group: "colourway" | "cut" | "size"; label: string }[];
+	/**
+	 * The choices he offers, in his order.
+	 *
+	 * `key` is the stable identifier the order form posts and the price snapshot
+	 * resolves against — **never the label**, which is translated and which he
+	 * can reword between someone opening the page and someone submitting it.
+	 */
+	options: { group: "colourway" | "cut" | "size"; key: string; label: string }[];
 	/** `kids` adds one line to the fit copy: *cut with room to grow* *(R13)*. */
 	audience: "adult" | "kids";
 }
@@ -263,6 +270,7 @@ export async function livePiece(locale: Locale, slug: string): Promise<PieceDeta
 		db
 			.select({
 				group: schema.pieceOptions.group,
+				key: schema.pieceOptions.key,
 				label: schema.pieceOptions.label,
 				translatedLabel: schema.pieceOptionTranslations.label,
 			})
@@ -294,9 +302,80 @@ export async function livePiece(locale: Locale, slug: string): Promise<PieceDeta
 		image: images[0] ?? null,
 		options: options.map((option) => ({
 			group: option.group,
+			key: option.key,
 			label: option.translatedLabel ?? option.label,
 		})),
 	};
+}
+
+/**
+ * What the fit fork may ask about one piece *(R7)*.
+ *
+ * **Definitions in code, ranges in the dashboard.** The list and the three
+ * bands come from the piece's garment type, which is his to configure in
+ * Settings — so he can widen a guardrail the day a real customer is blocked,
+ * without a deploy, and he cannot invent a measurement with nowhere to render
+ * on the drawing.
+ *
+ * An empty list is a legitimate answer and not a failure: the fork asks
+ * nothing, and the numbers are settled with him after he confirms the piece.
+ */
+export interface GarmentFit {
+	measurements: {
+		measurementKey: string;
+		required: boolean;
+		position: number;
+		plausibleMin: number;
+		plausibleMax: number;
+		impossibleMin: number;
+		impossibleMax: number;
+	}[];
+	/** The sizes he offers on this piece, for the standard path. */
+	sizes: { key: string; label: string }[];
+}
+
+export async function garmentFit(slug: string): Promise<GarmentFit> {
+	const db = await getDb();
+
+	const [piece] = await db
+		.select({ id: schema.pieces.id, garmentTypeId: schema.pieces.garmentTypeId })
+		.from(schema.pieces)
+		.where(and(isPublic, eq(schema.pieces.slug, slug)))
+		.limit(1);
+
+	if (!piece) return { measurements: [], sizes: [] };
+
+	const [measurements, sizes] = await Promise.all([
+		db
+			.select({
+				measurementKey: schema.garmentTypeMeasurements.measurementKey,
+				required: schema.garmentTypeMeasurements.required,
+				position: schema.garmentTypeMeasurements.position,
+				plausibleMin: schema.garmentTypeMeasurements.plausibleMin,
+				plausibleMax: schema.garmentTypeMeasurements.plausibleMax,
+				impossibleMin: schema.garmentTypeMeasurements.impossibleMin,
+				impossibleMax: schema.garmentTypeMeasurements.impossibleMax,
+			})
+			.from(schema.garmentTypeMeasurements)
+			.where(eq(schema.garmentTypeMeasurements.garmentTypeId, piece.garmentTypeId))
+			.orderBy(asc(schema.garmentTypeMeasurements.position)),
+		// The standard path's sizes are the piece's own `size` option group —
+		// already a concept, already carrying a price modifier, and already his to
+		// set. No second source of truth for what sizes exist.
+		db
+			.select({ key: schema.pieceOptions.key, label: schema.pieceOptions.label })
+			.from(schema.pieceOptions)
+			.where(
+				and(
+					eq(schema.pieceOptions.pieceId, piece.id),
+					eq(schema.pieceOptions.group, "size"),
+					eq(schema.pieceOptions.available, true),
+				),
+			)
+			.orderBy(asc(schema.pieceOptions.position)),
+	]);
+
+	return { measurements, sizes };
 }
 
 /** The numbers he turns, and the one line of theme copy he writes. */
