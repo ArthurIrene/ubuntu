@@ -339,6 +339,9 @@ made-to-order means nothing ever runs out.
 
 ## Round 7 — Fit data
 
+*Amended at launch: the emphasis flipped to standard-sizing-first. Everything below
+is still built and still stands — see the amendment at the foot of this round.*
+
 - **Measurements are the urged path**, and therefore taught. Standard sizing remains
   fully available and is not a lesser choice. *(This supersedes two earlier lines:
   "the urging stays light" and "teaching people to measure serves a gap that is nearly
@@ -385,6 +388,19 @@ made-to-order means nothing ever runs out.
   actor is recorded either way.
 - **Kids get cheap.** A children's garment is a garment type with different bands, so
   Round 13 is left with the questions that actually need thought.
+- ~~**Measurements are the urged path**~~ — **amended at launch: standard sizing
+  leads.** S/M/L/XL plus height and weight is the front door; measurements are the
+  second path, still offered and still taught. **This unbuilds nothing.** The fit
+  record, the three bands, the `source` liability values, millimetres-as-integers,
+  append-never-overwrite, the instruction beside the field and the diagram's
+  enhancement-only status all stand, and **both paths ship**. What changes is which
+  one the page presents first — an emphasis, copy and layout decision landing in
+  Phase 5, not a schema or machinery change.
+  *The reason is launch simplification: a size is far less for a first customer to
+  face than a tape measure, and standard-first takes the per-garment measurement
+  tables off the critical path to a first sale.* The measurement path stays fully
+  built and ready to lead again if diaspora demand for it grows, so standard-first
+  is a change of emphasis rather than a retreat from it.
 
 ## Round 8 — Images
 
