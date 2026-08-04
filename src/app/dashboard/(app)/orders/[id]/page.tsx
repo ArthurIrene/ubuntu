@@ -260,6 +260,24 @@ export default async function OrderScreen({
 					 */
 					<form action={confirmPrice}>
 						<input type="hidden" name="orderId" value={order.id} />
+
+						{/*
+						 * What they chose, snapshotted when they asked. These lines are
+						 * carried through confirmation untouched and added into the total
+						 * — he is confirming the base, not re-entering their order.
+						 */}
+						{priceLines.filter((line) => line.kind !== "base").length > 0 && (
+							<ul>
+								{priceLines
+									.filter((line) => line.kind !== "base")
+									.map((line) => (
+										<li key={line.id}>
+											{line.label} · {cash(line.amount)}
+										</li>
+									))}
+							</ul>
+						)}
+
 						<label htmlFor="base">The piece</label>
 						<input
 							id="base"

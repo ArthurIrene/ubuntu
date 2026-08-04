@@ -9,7 +9,7 @@
 // That is what makes forgetting structural rather than lucky, and it is the
 // whole reason the queue was chosen over a table.
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, schema } from "@/db/client";
 import { whatsappDraft, type EmailKey } from "@/emails/order";
@@ -128,7 +128,11 @@ export async function today(now: Date = new Date()): Promise<Today> {
 				note: schema.orderEvents.note,
 			})
 			.from(schema.orderEvents)
-			.where(inArray(schema.orderEvents.orderId, ids)),
+			.where(inArray(schema.orderEvents.orderId, ids))
+			// **Ordered, because one rule reads it as a sequence.** Which message
+			// bounced is decided by the *last* thing that happened to it, and a
+			// select with no ORDER BY is free to hand back any order it likes.
+			.orderBy(asc(schema.orderEvents.at)),
 		db
 			.select({
 				id: schema.payments.id,

@@ -44,6 +44,21 @@ export interface EmailMessage {
 	 * an order email from going out.
 	 */
 	text?: string;
+	/**
+	 * An opaque string carried out to the provider and handed back on a bounce.
+	 *
+	 * **This is what makes a failed send findable** *(R11)*. A bounce arrives
+	 * asynchronously, minutes or hours later, on a webhook that knows nothing
+	 * about this app — so unless the message carries its own identity outward,
+	 * the only way home is to guess from the recipient address, and a customer
+	 * with two open orders makes that a coin toss.
+	 *
+	 * Deliberately opaque and deliberately not a provider concept. `src/lib/
+	 * notify.ts` decides what goes in it and what it means coming back; this
+	 * layer only carries it. **Never a token** — it travels to a third party and
+	 * returns through an unauthenticated URL.
+	 */
+	reference?: string;
 }
 
 /**
@@ -100,10 +115,10 @@ export class EmailNotConfiguredError extends Error {
  * Swapping providers is this function and the two environment variables it
  * reads. Nothing else in the app knows the name Resend.
  */
-async function resendSend(message: EmailMessage): Promise<void> {
-	const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-	const env = getCloudflareContext().env as unknown as Record<string, string | undefined>;
-
+async function resendSend(
+	message: EmailMessage,
+	env: Record<string, string | undefined>,
+): Promise<void> {
 	const key = env.RESEND_API_KEY;
 	const from = env.EMAIL_FROM;
 	if (!key || !from) {
@@ -129,6 +144,12 @@ async function resendSend(message: EmailMessage): Promise<void> {
 			subject: message.subject,
 			html: message.html,
 			...(message.text ? { text: message.text } : {}),
+			// The reference, as the one thing Resend will hand back on a bounce.
+			// Tags are the documented correlation channel and the values survive
+			// the round trip; the webhook reads this and nothing else about the
+			// message. Resend restricts a tag value to letters, digits, `_` and
+			// `-`, which is what `notify.ts` composes it out of.
+			...(message.reference ? { tags: [{ name: "reference", value: message.reference }] } : {}),
 		}),
 	});
 
@@ -167,9 +188,73 @@ async function resendSend(message: EmailMessage): Promise<void> {
 }
 
 /**
- * The adapter instance. The app imports this; swapping providers replaces the
+ * Blank out an order token wherever one appears in a string.
+ *
+ * **The path is the credential** *(R5)*, so a token in a log line is a live
+ * order link in a log line — `CLAUDE.md` forbids it *"not in errors, not in
+ * server logs"*, and a redaction that happens at the edge of the logging call
+ * is the only version that cannot be forgotten by a future caller.
+ *
+ * Exported for the test that proves it, which is also the test that proves the
+ * log transport below cannot leak one.
+ */
+export function scrubTokens(value: string): string {
+	return value.replace(/\/o\/[A-Za-z0-9_-]+/g, "/o/[token redacted]");
+}
+
+/**
+ * **The log transport: construct fully, deliver nowhere.**
+ *
+ * Delivery is Phase 7 — the sending domain is unverified, so Resend refuses
+ * every recipient but the account holder's own address. That is a DNS record
+ * this build lane does not own, and waiting on it would leave the whole order
+ * flow unprovable. So this renders the real message, through the real
+ * templates, in the real locale, and writes it where it can be read.
+ *
+ * **It is a transport, not a failure.** A send through it succeeds, and
+ * `notify.ts` records `message_sent` — because it did what this configuration
+ * asks of it. That distinction is load-bearing twice over: it keeps a stubbed
+ * rail from manufacturing a bounce on every order, and it keeps the bounce path
+ * *(R11)* provable, which it would not be if every send failed identically.
+ *
+ * **The token is redacted and nothing else is.** The brief for this phase asked
+ * the log to carry the token; `CLAUDE.md` forbids exactly that, and the Never
+ * list wins. What proves the link is right is `src/emails/order.test.ts`,
+ * asserting on the constructed message in memory — an assertion is not a log,
+ * and it is the stronger proof anyway.
+ */
+async function logSend(message: EmailMessage): Promise<void> {
+	console.log(
+		[
+			"email: constructed, not sent (EMAIL_TRANSPORT=log)",
+			`  to:        ${message.to}`,
+			`  reference: ${message.reference ?? "none"}`,
+			`  subject:   ${scrubTokens(message.subject)}`,
+			"  text:",
+			scrubTokens(message.text ?? "(no plain-text part)")
+				.split("\n")
+				.map((line) => `    ${line}`)
+				.join("\n"),
+		].join("\n"),
+	);
+}
+
+/**
+ * The adapter instance. The app imports this; swapping providers replaces a
  * body above and nothing that imports this changes.
+ *
+ * **Which transport is an environment value, not a code path.** `resend` is the
+ * default and the only one that reaches a customer; `EMAIL_TRANSPORT=log`
+ * selects the constructor above. Anything else — a typo, an empty string — is
+ * Resend, because a mail rail that silently stops delivering on a bad value is
+ * the failure that goes unnoticed longest.
  */
 export const email: Email = {
-	send: resendSend,
+	async send(message: EmailMessage): Promise<void> {
+		const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+		const env = getCloudflareContext().env as unknown as Record<string, string | undefined>;
+
+		if (env.EMAIL_TRANSPORT === "log") return logSend(message);
+		return resendSend(message, env);
+	},
 };

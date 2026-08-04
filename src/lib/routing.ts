@@ -35,3 +35,33 @@ export function resolveRoute(pathname: string, open: boolean): RouteDecision {
 
 	return { kind: "next" };
 }
+
+/**
+ * True for the order tree — `/o` and everything beneath it.
+ *
+ * `/o/<token>`, its `I've paid` POST, and the private photo stream all live
+ * here, and all three must carry the same two headers. Written as a prefix test
+ * rather than as a matcher pattern so it can be tested directly, and so
+ * `/optional` is not an order route.
+ */
+export function isOrderRoute(pathname: string): boolean {
+	return pathname === "/o" || pathname.startsWith("/o/");
+}
+
+/**
+ * The two headers every order route answers with *(R5)*.
+ *
+ * **`Referrer-Policy: no-referrer`, because the path is the credential.** Any
+ * link off this page — and any image, stylesheet or font it loads from
+ * elsewhere — would otherwise send the full URL, token and all, to whoever is
+ * on the other end. It is one header standing between a live order link and a
+ * third party's access log.
+ *
+ * **`X-Robots-Tag: noindex, nofollow`** beside the metadata block on the page
+ * itself, because a header covers what a `<meta>` tag cannot: the photo stream
+ * is not HTML and has no `<head>` to put one in.
+ */
+export const ORDER_ROUTE_HEADERS: Record<string, string> = {
+	"Referrer-Policy": "no-referrer",
+	"X-Robots-Tag": "noindex, nofollow",
+};

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { OrderContactFields, OrderRefusal } from "@/components/order-fields";
 import { fill } from "@/content";
 import { formatMoney } from "@/emails/order";
 import { siteSettings } from "@/lib/catalogue";
 import { pageContext } from "@/lib/page";
 import { path } from "@/lib/routes";
+
+import { sendCommission } from "../actions";
 
 /**
  * *Only yours* — the commissions page, at `/commissions`.
@@ -19,8 +22,9 @@ import { path } from "@/lib/routes";
  * than a starting-from guess at a total nobody can yet quote, and it lets the page
  * say what it costs to *begin* *(R6)*.
  *
- * This phase builds the read side. The form below renders and cannot submit;
- * Phase 4 is what creates an order.
+ * The form at the foot creates a commission order *(Phase 4)*. It asks for a
+ * story, not a size: **fit arrives on the order page when the design is agreed**
+ * *(R7)*, because there is nothing to cut yet.
  */
 export const dynamic = "force-dynamic";
 
@@ -33,9 +37,15 @@ export async function generateMetadata({
 	return { title: copy.commissions.title };
 }
 
-export default async function Commissions({ params }: { params: Promise<{ locale: string }> }) {
+export default async function Commissions({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ locale: string }>;
+	searchParams: Promise<{ e?: string }>;
+}) {
 	const { locale, copy } = await pageContext(params);
-	const settings = await siteSettings(locale);
+	const [settings, { e }] = await Promise.all([siteSettings(locale), searchParams]);
 
 	/*
 	 * **Zero is unanswered, not free.** The design fee is an absolute figure that
@@ -80,60 +90,70 @@ export default async function Commissions({ params }: { params: Promise<{ locale
 			</section>
 
 			{/*
-			 * Where Phase 4's form mounts. It asks for a story, not a size — no
-			 * measurements here, because asking sleeve length next to someone's
-			 * grandmother's story would break the spell, and fit is settled with him
-			 * after the design is agreed.
+			 * The form. It asks for a story, not a size — no measurements here,
+			 * because asking sleeve length next to someone's grandmother's story would
+			 * break the spell, and fit is settled with him after the design is agreed
+			 * *(R7)*.
 			 *
 			 * **No image field**, deliberately: an anonymous upload box is the most
 			 * attackable surface on a site with no accounts. Reference images unlock on
 			 * the tokenised order page once he has accepted *(Phase 8)*.
 			 *
-			 * Not a `<form>`: with no action it would submit itself back to this page
-			 * on Enter. Inert fields, disabled button, and Phase 4 replaces the whole
-			 * block.
+			 * No JavaScript is involved in any of it. The action redirects to the new
+			 * order's own page, or back here with the refusal.
 			 */}
 			<section>
 				<h2>{copy.commissions.formHeading}</h2>
 
-				<p>
-					<label htmlFor="scene">{copy.commissions.scene}</label>
-					<textarea id="scene" placeholder={copy.commissions.scenePrompt} disabled />
-				</p>
-				<p>
-					<label htmlFor="garment">{copy.commissions.garment}</label>
-					<input id="garment" type="text" placeholder={copy.commissions.garmentUnsure} disabled />
-				</p>
-				<p>
-					<label htmlFor="name">{copy.commissions.name}</label>
-					<input id="name" type="text" disabled />
-				</p>
-				{/* **Email and phone are both required on an order.** Email is the
-				    automated rail; phone is delivery and his own hand. */}
-				<p>
-					<label htmlFor="email">{copy.commissions.email}</label>
-					<input id="email" type="email" disabled />
-				</p>
-				<p>
-					<label htmlFor="phone">{copy.commissions.phone}</label>
-					<input id="phone" type="tel" disabled />
-				</p>
-				<p>
-					<label htmlFor="anything-else">{copy.commissions.anythingElse}</label>
-					<textarea id="anything-else" disabled />
-				</p>
+				<OrderRefusal error={e} copy={copy.order} />
 
-				{/* Said rather than discovered: the email fires whichever channel they
-				    pick, because the link has to outlast a cleared chat. */}
-				<h3>{copy.commissions.channelHeading}</h3>
-				<p>{copy.commissions.channelNote}</p>
-				<p>{copy.commissions.noImages}</p>
+				<form action={sendCommission}>
+					{/*
+					 * The labels travel with the answers. Their three replies are kept as
+					 * one passage of their own words and shown back to them during the
+					 * design window, so the words that introduced each one belong with
+					 * them rather than being reconstructed later in whichever language
+					 * happens to be rendering.
+					 */}
+					<input type="hidden" name="labelScene" value={copy.commissions.scene} />
+					<input type="hidden" name="labelGarment" value={copy.commissions.garment} />
+					<input type="hidden" name="labelAnythingElse" value={copy.commissions.anythingElse} />
 
-				<p>
-					<button type="button" disabled>
-						{copy.commissions.button}
-					</button>
-				</p>
+					<p>
+						<label htmlFor="scene">{copy.commissions.scene}</label>
+						<textarea
+							id="scene"
+							name="scene"
+							rows={6}
+							placeholder={copy.commissions.scenePrompt}
+							required
+						/>
+					</p>
+					<p>
+						<label htmlFor="garment">{copy.commissions.garment}</label>
+						<input
+							id="garment"
+							name="garment"
+							type="text"
+							placeholder={copy.commissions.garmentUnsure}
+						/>
+					</p>
+
+					<OrderContactFields locale={locale} copy={copy.order.form} />
+
+					<p>
+						<label htmlFor="anything-else">{copy.commissions.anythingElse}</label>
+						<textarea id="anything-else" name="anythingElse" rows={3} />
+					</p>
+
+					<p>{copy.commissions.noImages}</p>
+
+					{/* **Never anything else.** */}
+					<p>
+						<button type="submit">{copy.commissions.button}</button>
+					</p>
+				</form>
+
 				{/* Reply time is qualitative here and numeric everywhere else — this
 				    line deliberately does not read the dashboard field. */}
 				<p>{copy.commissions.beneathButton}</p>

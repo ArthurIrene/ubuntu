@@ -203,6 +203,19 @@ Where a piece misfits because the numbers given were wrong, alteration is offere
 at a stated additional price. When a physical measuring point exists, the liability
 model already accounts for it.
 
+**Amended for launch — standard sizing leads.** ~~Measurements are the urged path~~ —
+at launch the site presents **standard sizing (S/M/L/XL) as the front door**, and
+measurements as the second path, offered and taught exactly as described above.
+*(This reverses the emphasis in the paragraph above and nothing else. **Both paths
+remain built**: the fit record, the three guardrail bands, the `source` liability
+values, the millimetre discipline and the append-never-overwrite rule are all
+unchanged. It is a copy-and-layout decision landing in Phase 5, not a schema or
+machinery change.)* The reason is launch simplification — a size is far less for a
+first customer to face than a tape measure, and standard-first takes the per-garment
+measurement tables off the critical path to a first sale. The measurement path stays
+fully built and ready to lead again if diaspora demand for it grows, so
+standard-first is a change of emphasis rather than a retreat from it.
+
 **Cut, not gender.** What changes the making is the cut of the garment, not who
 the customer is. Cut is a per-piece option, structurally identical to colourway —
 he sets the available cuts on each piece; a piece with one cut asks no question.

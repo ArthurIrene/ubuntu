@@ -8,7 +8,7 @@ import {
 	band,
 	isMeasurementKey,
 	MEASUREMENTS,
-	SIZE_CHART_VERSION,
+	RANGES_VERSION,
 	toCanonical,
 } from "@/content/measurements";
 import { getDb, schema } from "@/db/client";
@@ -156,11 +156,45 @@ export async function confirmPrice(form: FormData): Promise<void> {
 		.limit(1);
 	if (!order) redirect("/dashboard/orders");
 
-	const total = base + (adjustment ?? 0);
+	/*
+	 * **What the customer chose survives this** *(R3)*.
+	 *
+	 * The public order form writes their colourway, cut, size and any priority as
+	 * `option` and `priority` lines at the moment they ask — that snapshot is what
+	 * they were shown, and rewriting it here from a live piece row would answer
+	 * *why 51,000?* with today's catalogue instead of with their order. So the
+	 * lines he does not own are read back and carried through; the two he does —
+	 * the base and the adjustment — are replaced.
+	 *
+	 * The total is the whole column added up, not the base alone. A modifier that
+	 * does not reach the figure is a modifier the customer paid nothing for.
+	 */
+	const theirs = await db
+		.select({
+			kind: schema.orderPriceLines.kind,
+			label: schema.orderPriceLines.label,
+			amount: schema.orderPriceLines.amount,
+			position: schema.orderPriceLines.position,
+		})
+		.from(schema.orderPriceLines)
+		.where(eq(schema.orderPriceLines.orderId, orderId));
+
+	const modifiers = theirs
+		.filter((line) => line.kind === "option" || line.kind === "priority")
+		.sort((a, b) => a.position - b.position);
+
+	const total = base + modifiers.reduce((sum, line) => sum + line.amount, 0) + (adjustment ?? 0);
 
 	await db.delete(schema.orderPriceLines).where(eq(schema.orderPriceLines.orderId, orderId));
 	await db.insert(schema.orderPriceLines).values([
 		{ orderId, kind: "base" as const, label: "The piece", amount: base, position: 0 },
+		...modifiers.map((line, index) => ({
+			orderId,
+			kind: line.kind,
+			label: line.label,
+			amount: line.amount,
+			position: index + 1,
+		})),
 		...(adjustment !== null && adjustment !== 0
 			? [
 					{
@@ -169,7 +203,7 @@ export async function confirmPrice(form: FormData): Promise<void> {
 						label: reason,
 						amount: adjustment,
 						reason,
-						position: 1,
+						position: modifiers.length + 1,
 					},
 				]
 			: []),
@@ -431,7 +465,9 @@ export async function recordFit(form: FormData): Promise<void> {
 			garmentTypeId,
 			source,
 			unit,
-			sizeChartVersion: SIZE_CHART_VERSION,
+			// The grouping label. **The evidence is the band values snapshotted
+			// onto each measurement row below**, not this integer.
+			sizeChartVersion: String(RANGES_VERSION),
 			standardSize: text(form, "standardSize") || null,
 			// **Age at the time of the order, as a number, never a date of birth**
 			// *(R13a)*. A birth date ages by itself and identifies; a number does
