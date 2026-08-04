@@ -31,3 +31,20 @@ export function hasLocalePrefix(pathname: string): boolean {
 export function toLocale(value: string): Locale {
 	return value === "rw" ? "rw" : "en";
 }
+
+/**
+ * A path as the address bar shows it, from a path as the app router sees it.
+ *
+ * **The middleware rewrites "/" to "/en" without touching the URL** *(R14)*, so
+ * a server render — and a static prerender — sees `/en/the-making` where the
+ * browser will see `/the-making`. Anything comparing a real path against a link
+ * built by `path()` has to reconcile the two, or the server and the client
+ * disagree about which page the reader is on: the nav's stitch lands under
+ * nothing in the HTML and then jumps into place at hydration.
+ *
+ * Kinyarwanda needs no reconciling — `/rw` is a real prefix a customer sees.
+ */
+export function publicPath(pathname: string): string {
+	if (pathname === "/en") return "/";
+	return pathname.startsWith("/en/") ? pathname.slice("/en".length) : pathname;
+}

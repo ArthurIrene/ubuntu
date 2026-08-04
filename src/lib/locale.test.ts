@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasLocalePrefix, localeFromPath, toLocale } from "./locale";
+import { hasLocalePrefix, localeFromPath, publicPath, toLocale } from "./locale";
 
 describe("localeFromPath", () => {
 	it("reads /rw and its subtree as Kinyarwanda", () => {
@@ -42,5 +42,32 @@ describe("toLocale", () => {
 		expect(toLocale("rw")).toBe("rw");
 		expect(toLocale("en")).toBe("en");
 		expect(toLocale("fr")).toBe("en");
+	});
+});
+
+describe("publicPath", () => {
+	// What the nav compares against a link built by `path()`. A server render
+	// sees the middleware's rewrite; the browser sees the address bar.
+	it("strips the internal /en the middleware rewrote in", () => {
+		expect(publicPath("/en/the-making")).toBe("/the-making");
+		expect(publicPath("/en/collection/fishing-shorts")).toBe("/collection/fishing-shorts");
+	});
+
+	it("maps the rewritten home path back to /", () => {
+		expect(publicPath("/en")).toBe("/");
+	});
+
+	it("leaves Kinyarwanda alone — /rw is a prefix a customer sees", () => {
+		expect(publicPath("/rw")).toBe("/rw");
+		expect(publicPath("/rw/collection")).toBe("/rw/collection");
+	});
+
+	it("leaves an already-public path alone", () => {
+		expect(publicPath("/")).toBe("/");
+		expect(publicPath("/collection")).toBe("/collection");
+	});
+
+	it("does not mistake a shared prefix boundary for the locale segment", () => {
+		expect(publicPath("/energy")).toBe("/energy");
 	});
 });

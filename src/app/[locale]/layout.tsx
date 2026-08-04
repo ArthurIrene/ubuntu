@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { content } from "@/content";
+import { fontVariables } from "@/lib/fonts";
 import { LOCALES, toLocale } from "@/lib/locale";
+import { ARM, SCAN } from "@/motion/reveal";
 import "../globals.css";
 
 // Both locales prerender. English is unprefixed at the root, Kinyarwanda at
@@ -38,11 +40,29 @@ export default async function LocaleLayout({
 	// else is a 404 rather than an on-demand render of an unknown locale.
 	if (!(LOCALES as readonly string[]).includes(locale)) notFound();
 	return (
-		<html lang={locale}>
+		// The three faces arrive as CSS variables; `globals.css` decides which is
+		// used where. Nothing below has to import a font to have one.
+		<html lang={locale} className={fontVariables}>
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+				{/*
+				 * Arms the scroll reveals before the first paint, and only where
+				 * motion is wanted and observable. **With no JavaScript this never
+				 * runs and every section is simply visible** — the CSS hides nothing
+				 * that this attribute has not armed.
+				 */}
+				<script dangerouslySetInnerHTML={{ __html: ARM }} />
 			</head>
-			<body className="antialiased">{children}</body>
+			<body className="antialiased">
+				{children}
+				{/*
+				 * Last in the body on purpose: the document is parsed, and the
+				 * browser has not yet painted it. Anything later — `DOMContentLoaded`,
+				 * a `useEffect` — reveals a section that has already been shown as a
+				 * blank gap.
+				 */}
+				<script dangerouslySetInnerHTML={{ __html: SCAN }} />
+			</body>
 		</html>
 	);
 }
