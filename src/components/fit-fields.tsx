@@ -3,19 +3,38 @@ import type { Content } from "@/content/en";
 import { MEASUREMENTS, isMeasurementKey } from "@/content/measurements";
 import { nativeBounds, type BandSpec } from "@/lib/fit";
 
-// The fit fork, bare.
+// The fit fork.
 //
 // **The form completes with no JavaScript, no motion and a screen reader**
 // *(R7)*. Nothing in this file is a client component, nothing has an event
 // handler, and the only validation the browser does is HTML's own constraint
 // validation — which is markup, not script.
 //
-// **The live diagram is Phase 6 and is never the input mechanism.** When it
-// arrives it renders beside these fields and reads their values; delete it and
-// the form still works. That is the difference between a beautiful idea and an
-// order that cannot be placed.
+// **The live diagram is a sketched moment and is never the input mechanism.**
+// When it arrives it renders beside these fields and reads their values; delete
+// it and the form still works. That is the difference between a beautiful idea
+// and an order that cannot be placed.
 //
-// Unstyled. Phase 5 owns every dimension of how this looks.
+// ── STANDARD SIZING LEADS ────────────────────────────────────────────────────
+//
+// R7 urged measurements; **the launch amendment reverses the emphasis and puts
+// standard sizing first**, and the decision documents place that change here, in
+// Phase 5: *"an emphasis, copy and layout decision landing in Phase 5, not a
+// schema or machinery change."*
+//
+// So this file is where it lands, and what changes is exactly three things: the
+// size path is rendered first, it is the one checked by default, and each path's
+// prompt now sits inside the path it belongs to rather than in a separate fork
+// block above both. **Nothing is unbuilt.** The fit record, the three bands, the
+// `source` liability values, millimetres-as-integers, append-never-overwrite,
+// the instruction beside each field and the diagram's enhancement-only status
+// all stand, and both paths still ship in full.
+//
+// *A size is a real choice, not a fallback — and measurements are an invited
+// second path, not a leftover.* Which is why measurements keep equal visual
+// weight below rather than being folded away behind a disclosure: R7's reason
+// for rendering both was that **a screen reader user tabbing through a form
+// should meet the whole of it** rather than a shape that changes under them.
 
 /** What a measurement looks like on screen, before anyone has typed in it. */
 export interface FitFieldSpec extends BandSpec {
@@ -27,9 +46,8 @@ export interface FitFieldSpec extends BandSpec {
  * The fork itself, and both paths beneath it.
  *
  * **Both paths render, always.** Hiding one behind the radio would need
- * JavaScript, and a screen reader user tabbing through a form should meet the
- * whole of it rather than a shape that changes under them. The radio decides
- * which one is *read* on the server; the other is ignored whatever is in it.
+ * JavaScript, and the radio decides which one is *read* on the server; the other
+ * is ignored whatever is in it.
  *
  * *The cost, named: a customer can fill in both.* That is a smaller cost than a
  * form that only works with a bundle loaded, and the server takes exactly one.
@@ -67,134 +85,190 @@ export function FitFields({
 	const canMeasure = specs.length > 0;
 	const canSize = sizes.length > 0;
 
+	// One fieldset, and **its legend is carried for the screen reader and not
+	// drawn.** `pieceCopy.fitForkHeading` is the section heading immediately
+	// above this — *"How it will be cut"* over *"How should it be cut?"* — and
+	// set one after the other on the page they read as a stutter rather than as
+	// two questions. The radios are still grouped and still named; what is
+	// dropped is the second heading, not the answer to what this group is.
 	return (
-		<fieldset>
-			<legend>{pieceCopy.fitForkHeading}</legend>
+		<fieldset className="mt-10">
+			<legend className="sr-only">{copy.pathHeading}</legend>
 
-			{/*
-			 * The fork. **Measurements are the urged path and therefore taught; a
-			 * size is a real choice, not a fallback** *(R7)* — so the two prompts
-			 * are warm and neither apologises for the other.
-			 */}
-			<fieldset>
-				<legend>{copy.pathHeading}</legend>
-
-				{canMeasure && (
-					<p>
-						<input
-							id="fit-path-measurements"
-							name="fitPath"
-							type="radio"
-							value="measurements"
-							defaultChecked
-						/>
-						<label htmlFor="fit-path-measurements">{copy.pathMeasurements}</label>
-						<span>{pieceCopy.fitForkMeasurements}</span>
-					</p>
-				)}
-
+			<div className="border-t border-(--canvas-edge)">
+				{/* ── The front door: a size ───────────────────────────────────── */}
 				{canSize && (
-					<p>
-						<input
-							id="fit-path-size"
-							name="fitPath"
-							type="radio"
-							value="size"
-							defaultChecked={!canMeasure}
-						/>
-						<label htmlFor="fit-path-size">{copy.pathSize}</label>
-						<span>{pieceCopy.fitForkSize}</span>
-					</p>
-				)}
-			</fieldset>
-
-			{canMeasure && (
-				<>
-					{/*
-					 * **This answer decides liability** *(R7, R13a)*, which is why it is
-					 * a recorded fact and not an inference. `guardian` is the customer
-					 * measuring someone else — a gift, or a child — and reusing `self`
-					 * for it gets liability right and the record wrong.
-					 */}
-					<fieldset>
-						<legend>{copy.whoHeading}</legend>
+					<div className="border-b border-(--canvas-edge) py-7">
 						<p>
-							<input id="fit-who-self" name="fitWho" type="radio" value="self" defaultChecked />
-							<label htmlFor="fit-who-self">{copy.whoSelf}</label>
-						</p>
-						<p>
-							<input id="fit-who-guardian" name="fitWho" type="radio" value="guardian" />
-							<label htmlFor="fit-who-guardian">{copy.whoGuardian}</label>
-						</p>
-						<p>
-							<input id="fit-who-tailor" name="fitWho" type="radio" value="tailor" />
-							<label htmlFor="fit-who-tailor">{copy.whoTailor}</label>
-						</p>
-					</fieldset>
-
-					{/*
-					 * **A number of years, never a date of birth** *(R13a)*. Asked only
-					 * on a children's garment type, because that is the only place an
-					 * age is read against anything — and the note says out loud what is
-					 * not being kept, which a parent typing it is owed.
-					 */}
-					{audience === "kids" && (
-						<p>
-							<label htmlFor="fit-age">{copy.age}</label>
 							<input
-								id="fit-age"
-								name="fitAge"
-								type="number"
-								min={0}
-								max={18}
-								step={1}
-								inputMode="numeric"
-								aria-describedby="fit-age-note"
-							/>
-							<span id="fit-age-note">{copy.ageNote}</span>
-						</p>
-					)}
-
-					{[...specs]
-						.sort((a, b) => a.position - b.position)
-						.map((spec) => (
-							<Measurement
-								key={spec.measurementKey}
-								spec={spec}
-								copy={copy}
-								unit={unit}
-								refused={refused.includes(spec.measurementKey)}
-							/>
-						))}
-				</>
-			)}
-
-			{canSize && (
-				<fieldset>
-					<legend>{copy.sizeHeading}</legend>
-					{sizes.map((size, index) => (
-						<p key={size.key}>
-							<input
-								id={`fit-size-${size.key}`}
-								name="fitSize"
+								id="fit-path-size"
+								name="fitPath"
 								type="radio"
-								value={size.key}
-								defaultChecked={index === 0}
-							/>
-							<label htmlFor={`fit-size-${size.key}`}>{size.label}</label>
+								value="size"
+								// **The one checked by default.** The launch amendment, in
+								// the one line of code that carries it.
+								defaultChecked
+								className="align-middle"
+							/>{" "}
+							<label htmlFor="fit-path-size" className="align-middle font-serif text-lg">
+								{copy.pathSize}
+							</label>
 						</p>
-					))}
-					{/*
-					 * **No suggested size from height and weight** *(R7)*. It would
-					 * probably lift conversion and it competes with *he checks every
-					 * order himself* — quietly assuming the liability the policy just
-					 * spent three clauses distributing. They are recorded beside the
-					 * chosen size so he can do the checking, and nothing computes.
-					 */}
-					<p>{copy.sizeNote}</p>
-					<StandardCheck copy={copy} specs={specs} unit={unit} />
-				</fieldset>
-			)}
+
+						{/* One of *the two lines that make each path whole* (copy.md §4). */}
+						<p className="mt-3 max-w-[58ch] text-(--ink-quiet)">{pieceCopy.fitForkSize}</p>
+
+						<fieldset className="mt-6">
+							<legend className="kicker mb-3">{copy.sizeHeading}</legend>
+							<div className="flex flex-wrap gap-2.5">
+								{sizes.map((size, index) => (
+									// The radio is hidden and still focusable; the chip is its
+									// label. A real radio group, submitted with no script.
+									<span key={size.key}>
+										<input
+											id={`fit-size-${size.key}`}
+											name="fitSize"
+											type="radio"
+											value={size.key}
+											defaultChecked={index === 0}
+											className="sr-only"
+										/>
+										<label htmlFor={`fit-size-${size.key}`} className="chip">
+											{size.label}
+										</label>
+									</span>
+								))}
+							</div>
+						</fieldset>
+
+						{/*
+						 * **No suggested size from height and weight** *(R7)*. It would
+						 * probably lift conversion and it competes with *he checks every
+						 * order himself* — quietly assuming the liability the policy just
+						 * spent three clauses distributing. They are recorded beside the
+						 * chosen size so he can do the checking, and nothing computes.
+						 */}
+						<StandardCheck copy={copy} specs={specs} unit={unit} />
+						<p className="mt-5 max-w-[58ch] text-sm text-(--ink-quiet)">{copy.sizeNote}</p>
+					</div>
+				)}
+
+				{/* ── The invited second path: a tape ──────────────────────────── */}
+				{canMeasure && (
+					<div className="border-b border-(--canvas-edge) py-7">
+						<p>
+							<input
+								id="fit-path-measurements"
+								name="fitPath"
+								type="radio"
+								value="measurements"
+								// Checked only where there is no size to offer, so the piece
+								// still has a working fork rather than an empty one.
+								defaultChecked={!canSize}
+								className="align-middle"
+							/>{" "}
+							<label htmlFor="fit-path-measurements" className="align-middle font-serif text-lg">
+								{copy.pathMeasurements}
+							</label>
+						</p>
+
+						<p className="mt-3 max-w-[58ch] text-(--ink-quiet)">
+							{pieceCopy.fitForkMeasurements}
+						</p>
+
+						{/*
+						 * **This answer decides liability** *(R7, R13a)*, which is why it is
+						 * a recorded fact and not an inference. `guardian` is the customer
+						 * measuring someone else — a gift, or a child — and reusing `self`
+						 * for it gets liability right and the record wrong.
+						 */}
+						<fieldset className="mt-6">
+							<legend className="kicker mb-3">{copy.whoHeading}</legend>
+							<div className="flex flex-col gap-1.5">
+								<p>
+									<input
+										id="fit-who-self"
+										name="fitWho"
+										type="radio"
+										value="self"
+										defaultChecked
+										className="align-middle"
+									/>{" "}
+									<label htmlFor="fit-who-self" className="align-middle">
+										{copy.whoSelf}
+									</label>
+								</p>
+								<p>
+									<input
+										id="fit-who-guardian"
+										name="fitWho"
+										type="radio"
+										value="guardian"
+										className="align-middle"
+									/>{" "}
+									<label htmlFor="fit-who-guardian" className="align-middle">
+										{copy.whoGuardian}
+									</label>
+								</p>
+								<p>
+									<input
+										id="fit-who-tailor"
+										name="fitWho"
+										type="radio"
+										value="tailor"
+										className="align-middle"
+									/>{" "}
+									<label htmlFor="fit-who-tailor" className="align-middle">
+										{copy.whoTailor}
+									</label>
+								</p>
+							</div>
+						</fieldset>
+
+						{/*
+						 * **A number of years, never a date of birth** *(R13a)*. Asked only
+						 * on a children's garment type, because that is the only place an
+						 * age is read against anything — and the note says out loud what is
+						 * not being kept, which a parent typing it is owed.
+						 */}
+						{audience === "kids" && (
+							<p className="field mt-6 max-w-64">
+								<label htmlFor="fit-age" className="text-sm">
+									{copy.age}
+								</label>
+								<input
+									id="fit-age"
+									name="fitAge"
+									type="number"
+									min={0}
+									max={18}
+									step={1}
+									inputMode="numeric"
+									aria-describedby="fit-age-note"
+									className="field-input"
+								/>
+								<span id="fit-age-note" className="text-sm text-(--ink-quiet)">
+									{copy.ageNote}
+								</span>
+							</p>
+						)}
+
+						<div className="mt-6 flex flex-col gap-6">
+							{[...specs]
+								.sort((a, b) => a.position - b.position)
+								.map((spec) => (
+									<Measurement
+										key={spec.measurementKey}
+										spec={spec}
+										copy={copy}
+										unit={unit}
+										refused={refused.includes(spec.measurementKey)}
+									/>
+								))}
+						</div>
+					</div>
+				)}
+			</div>
 		</fieldset>
 	);
 }
@@ -228,41 +302,60 @@ function Measurement({
 	const suffix = definition.unit === "g" ? copy.unitKg : unit === "cm" ? copy.unitCm : "in";
 
 	return (
-		<p>
-			<label htmlFor={`m-${key}`}>{definition.label}</label>
-			{/*
-			 * `min` and `max` carry **the impossible band and only it**. HTML refuses
-			 * out-of-range before a request is made, with no JavaScript, and a screen
-			 * reader announces the range — so the one band that refuses is refused
-			 * natively. The unlikely band gets no attribute: a browser cannot ask a
-			 * question, and turning *unusual* into *invalid* is the hard block on a
-			 * real body that R7 refused.
-			 *
-			 * The server re-checks both regardless. This is a convenience; the write
-			 * path is the rule.
-			 */}
-			<input
-				id={`m-${key}`}
-				name={`m_${key}`}
-				type="number"
-				inputMode="decimal"
-				defaultValue={spec.previous}
-				required={spec.required}
-				min={bounds?.min}
-				max={bounds?.max}
-				step={bounds?.step}
-				aria-describedby={`m-${key}-how`}
-			/>
-			<span>{suffix}</span>
-			<span id={`m-${key}-how`}>{definition.instruction}</span>
+		<div className="field max-w-136">
+			{/* The label is ink and the instruction beneath is the quiet ink: set at
+			    the same weight they read as one block of grey and the field loses
+			    its name. */}
+			<label htmlFor={`m-${key}`} className="text-sm">
+				{definition.label}
+			</label>
+			<span className="flex items-baseline gap-2">
+				{/*
+				 * `min` and `max` carry **the impossible band and only it**. HTML refuses
+				 * out-of-range before a request is made, with no JavaScript, and a screen
+				 * reader announces the range — so the one band that refuses is refused
+				 * natively. The unlikely band gets no attribute: a browser cannot ask a
+				 * question, and turning *unusual* into *invalid* is the hard block on a
+				 * real body that R7 refused.
+				 *
+				 * The server re-checks both regardless. This is a convenience; the write
+				 * path is the rule.
+				 */}
+				<input
+					id={`m-${key}`}
+					name={`m_${key}`}
+					type="number"
+					inputMode="decimal"
+					defaultValue={spec.previous}
+					required={spec.required}
+					min={bounds?.min}
+					max={bounds?.max}
+					step={bounds?.step}
+					aria-describedby={`m-${key}-how`}
+					className="field-input w-28"
+				/>
+				<span className="text-sm text-(--ink-quiet)">{suffix}</span>
+			</span>
+			<span id={`m-${key}-how`} className="max-w-[52ch] text-sm text-(--ink-quiet)">
+				{definition.instruction}
+			</span>
 			{/*
 			 * **The impossible sentence, and never the implausible one.** It is aimed
 			 * at the typing — a slip of the finger, or the wrong unit — and never at
 			 * the body. The band that welcomes an unusual body asks its question on
 			 * the order page, where the number is already safe behind the token.
 			 */}
-			{refused && <span role="alert">{copy.impossible}</span>}
-		</p>
+			{refused && (
+				<span
+					role="alert"
+					// A thread down the side, not a red box: it is a question about a
+					// number, not a failure.
+					className="mt-1 max-w-[52ch] border-l-2 border-dashed border-(--thread) pl-4 text-sm"
+				>
+					{copy.impossible}
+				</span>
+			)}
+		</div>
 	);
 }
 
@@ -289,7 +382,7 @@ function StandardCheck({
 	const find = (key: string) => specs.find((spec) => spec.measurementKey === key);
 
 	return (
-		<>
+		<div className="mt-6 flex flex-wrap gap-x-10 gap-y-6">
 			{(["height", "weight"] as const).map((key) => {
 				const spec = find(key) ?? {
 					measurementKey: key,
@@ -305,7 +398,7 @@ function StandardCheck({
 				};
 				return <Measurement key={key} spec={spec} copy={copy} unit={unit} />;
 			})}
-		</>
+		</div>
 	);
 }
 
@@ -323,6 +416,8 @@ function StandardCheck({
  * warning and an acknowledged one are different facts in a dispute, and this is
  * a separate deliberate act rather than a checkbox ticked in the same breath as
  * the number — which makes it better evidence than the inline version would be.
+ *
+ * Unstyled: the order page is not this round's.
  */
 export function FitWarnings({
 	copy,

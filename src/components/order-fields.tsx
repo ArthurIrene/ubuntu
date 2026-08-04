@@ -14,7 +14,11 @@ import type { OrderError } from "@/lib/order-create";
 // `required`, `type` and `autoComplete` below is the browser doing that work
 // natively, which is the only version that survives a dead connection.
 //
-// Unstyled. Phase 5 owns how any of this looks.
+// Fields are ruled rather than boxed — a line under an answer is the same
+// gesture as the stitch under a nav item, and the site is drawn rather than
+// chromed. The focus outline still lands on top of the rule: a colour change
+// alone is not a focus indicator, and this is the form that has to be
+// completable by keyboard with nothing loaded.
 
 /**
  * The refusal, as a sentence.
@@ -44,9 +48,17 @@ export function OrderRefusal({ error, copy }: { error?: string; copy: Content["o
 	return (
 		// `alert` so a screen reader is told without having to go looking, and
 		// `tabIndex` so the reader can be sent here. Both are markup, not script.
-		<div role="alert" tabIndex={-1}>
-			<p>{copy.errors.heading}</p>
-			<p>{message}</p>
+		//
+		// A thread down the side rather than a red panel. Nothing on this site is
+		// red, and a refusal is a sentence asking for one more thing — not an
+		// alarm.
+		<div
+			role="alert"
+			tabIndex={-1}
+			className="my-8 max-w-[58ch] border-l-2 border-dashed border-(--thread) pl-4"
+		>
+			<p className="font-serif text-lg">{copy.errors.heading}</p>
+			<p className="mt-1 text-(--ink-quiet)">{message}</p>
 		</div>
 	);
 }
@@ -74,43 +86,93 @@ export function OrderContactFields({
 			    becomes `orders.locale`, which every email is then selected by. */}
 			<input type="hidden" name="locale" value={locale} />
 
-			<h3>{copy.detailsHeading}</h3>
+			<h3 className="mt-12 font-serif text-2xl leading-tight md:text-3xl">
+				{copy.detailsHeading}
+			</h3>
 
-			<p>
-				<label htmlFor="name">{copy.name}</label>
-				<input id="name" name="name" type="text" autoComplete="name" required />
-			</p>
-
-			<p>
-				<label htmlFor="email">{copy.email}</label>
-				<input id="email" name="email" type="email" autoComplete="email" required />
-				<span id="email-hint">{copy.emailHint}</span>
-			</p>
-
-			<p>
-				<label htmlFor="phone">{copy.phone}</label>
-				<input id="phone" name="phone" type="tel" autoComplete="tel" required />
-				<span id="phone-hint">{copy.phoneHint}</span>
-			</p>
-
-			<fieldset>
-				<legend>{copy.channelHeading}</legend>
-				<p>
+			<div className="mt-6 flex flex-col gap-6">
+				<p className="field max-w-104">
+					<label htmlFor="name" className="text-sm">
+						{copy.name}
+					</label>
 					<input
-						id="channel-email"
-						name="preferredChannel"
-						type="radio"
-						value="email"
-						defaultChecked
+						id="name"
+						name="name"
+						type="text"
+						autoComplete="name"
+						required
+						className="field-input"
 					/>
-					<label htmlFor="channel-email">{copy.channelEmail}</label>
 				</p>
-				<p>
-					<input id="channel-whatsapp" name="preferredChannel" type="radio" value="whatsapp" />
-					<label htmlFor="channel-whatsapp">{copy.channelWhatsapp}</label>
+
+				<p className="field max-w-104">
+					<label htmlFor="email" className="text-sm">
+						{copy.email}
+					</label>
+					<input
+						id="email"
+						name="email"
+						type="email"
+						autoComplete="email"
+						required
+						aria-describedby="email-hint"
+						className="field-input"
+					/>
+					<span id="email-hint" className="text-sm text-(--ink-quiet)">
+						{copy.emailHint}
+					</span>
 				</p>
+
+				<p className="field max-w-104">
+					<label htmlFor="phone" className="text-sm">
+						{copy.phone}
+					</label>
+					<input
+						id="phone"
+						name="phone"
+						type="tel"
+						autoComplete="tel"
+						required
+						aria-describedby="phone-hint"
+						className="field-input"
+					/>
+					<span id="phone-hint" className="text-sm text-(--ink-quiet)">
+						{copy.phoneHint}
+					</span>
+				</p>
+			</div>
+
+			<fieldset className="mt-8">
+				<legend className="kicker mb-3">{copy.channelHeading}</legend>
+				<div className="flex flex-col gap-1.5">
+					<p>
+						<input
+							id="channel-email"
+							name="preferredChannel"
+							type="radio"
+							value="email"
+							defaultChecked
+							className="align-middle"
+						/>{" "}
+						<label htmlFor="channel-email" className="align-middle">
+							{copy.channelEmail}
+						</label>
+					</p>
+					<p>
+						<input
+							id="channel-whatsapp"
+							name="preferredChannel"
+							type="radio"
+							value="whatsapp"
+							className="align-middle"
+						/>{" "}
+						<label htmlFor="channel-whatsapp" className="align-middle">
+							{copy.channelWhatsapp}
+						</label>
+					</p>
+				</div>
 				{/* The email fires either way, and this is where that is said. */}
-				<p>{copy.channelNote}</p>
+				<p className="mt-3 max-w-[52ch] text-sm text-(--ink-quiet)">{copy.channelNote}</p>
 			</fieldset>
 
 			<Honeypot />

@@ -210,6 +210,107 @@
 	}
 
 	/*
+	 * A small upright label — the collection theme above a piece's name, the
+	 * name of a path in the fork. Letterspaced and quiet, so it organises the
+	 * page without competing with the serif for a voice.
+	 */
+	.kicker {
+		font-size: 0.78rem;
+		letter-spacing: 0.15em;
+		text-transform: uppercase;
+		color: color-mix(in oklab, var(--color-ink) 52%, var(--color-cream));
+	}
+
+	/*
+	 * A form field: the label above, the answer written on a ruled line.
+	 *
+	 * Ruled rather than boxed because the site is drawn rather than chromed —
+	 * a line under a number is the same gesture as a stitch under a nav item.
+	 * The rule turns wine while the field has focus, and **the focus outline
+	 * from `@layer base` still lands on top of it**: a colour change alone is
+	 * not a focus indicator, and this form is the one that has to be completable
+	 * by keyboard with no JavaScript.
+	 */
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.field-input {
+		font: inherit;
+		color: var(--on-canvas);
+		background: transparent;
+		border: 0;
+		border-bottom: 1.5px solid var(--canvas-edge);
+		border-radius: 0;
+		padding: 0.5rem 0.15rem;
+	}
+
+	.field-input:focus {
+		border-bottom-color: var(--thread);
+	}
+
+	/*
+	 * A size, as something to press.
+	 *
+	 * The radio itself is visually hidden and still focusable, so the choice is
+	 * a real radio group — arrow keys, one tab stop, announced as a group, and
+	 * **it submits with no JavaScript**. The proposal drew these as buttons with
+	 * `aria-pressed`, which looks identical and cannot be submitted without a
+	 * script; a chip that is a label for a radio is the same picture with the
+	 * form still working.
+	 */
+	.chip {
+		display: inline-block;
+		border: 1px solid var(--canvas-edge);
+		border-radius: 2px;
+		padding: 0.65rem 1.25rem;
+		cursor: pointer;
+	}
+
+	.chip:hover {
+		border-color: var(--thread);
+	}
+
+	input:checked + .chip {
+		background: var(--color-ink);
+		color: var(--color-cream);
+		border-color: var(--color-ink);
+	}
+
+	/* The hidden radio cannot show a focus ring, so its label wears one. */
+	input:focus-visible + .chip {
+		outline: 2px solid var(--thread);
+		outline-offset: 3px;
+	}
+
+	/*
+	 * **"Ask for this piece."** The one button on the page.
+	 *
+	 * Outlined in wine and filled with nothing — wine is a thread, so it draws
+	 * the edge. On hover and on focus it does fill, which is the one place the
+	 * colour is allowed to become a ground: a pressed button is a moment, not a
+	 * section, and the law is about sections sharing a page with a garment.
+	 */
+	.ask {
+		font: inherit;
+		letter-spacing: 0.01em;
+		color: var(--on-canvas);
+		background: transparent;
+		border: 1.5px solid var(--thread);
+		border-radius: 2px;
+		padding: 1rem 2.125rem;
+		cursor: pointer;
+	}
+
+	.ask:hover,
+	.ask:focus-visible {
+		background: var(--thread);
+		color: var(--color-cream);
+	}
+
+	/*
 	 * A link in running text: the stitch under a word rather than a browser
 	 * underline. Drawn as a background so that the dash pattern is the one the
 	 * dividers and the nav already use — one thread on the page, not three
@@ -280,6 +381,22 @@
 /* In the first viewport at load. It is simply there. */
 :root[data-reveal="armed"] [data-section][data-immediate] > * {
 	transition: none;
+}
+
+/*
+ * **Print gets the finished page.**
+ *
+ * A reveal fires when a section scrolls into a viewport, and printing does not
+ * scroll: every section still below the fold would go to paper as a blank gap.
+ * The same rule covers reader modes and any other context that renders the
+ * document without a scroll position.
+ */
+@media print {
+	:root[data-reveal="armed"] [data-section] > * {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

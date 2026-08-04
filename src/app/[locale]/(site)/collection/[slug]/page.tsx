@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 import { FitFields } from "@/components/fit-fields";
 import { OrderContactFields, OrderRefusal } from "@/components/order-fields";
-import { FullPhoto } from "@/components/piece-photo";
+import { FullPhoto, LeadPhoto } from "@/components/piece-photo";
+import { Section, Stitch } from "@/components/section";
 import { fill } from "@/content";
 import { formatDays, formatMoney } from "@/emails/order";
 import { garmentFit, livePiece, siteSettings } from "@/lib/catalogue";
@@ -27,8 +28,17 @@ import { askForPiece } from "../../actions";
  *
  * The order block at the foot creates the order *(Phase 4)*. It is a plain
  * `<form>` posting to a Server Action: **no JavaScript, no motion and a screen
- * reader** *(R7)*, because the live fit diagram is an enhancement in Phase 6 and
- * never the input mechanism.
+ * reader** *(R7)*, because the live fit diagram is a sketched moment and never
+ * the input mechanism.
+ *
+ * ── WHAT PHASE 5 ROUND 1 ADDED, AND WHAT IT DID NOT ──────────────────────────
+ *
+ * The design. **The scene drawing is not here** — the piece's line art redrawing
+ * itself as the reader scrolls is the centrepiece of this page and it is a
+ * *sketched* moment: propose with a working prototype before committing. So is
+ * the gallery→page image transition, and so is the live fit diagram. Round 1
+ * builds the locked scroll reveal and nothing else, which is why `Section`
+ * carries all the motion on this page and no component here animates anything.
  */
 export const dynamic = "force-dynamic";
 
@@ -82,63 +92,118 @@ export default async function Piece({
 		{ key: "size" as const, label: copy.piece.size },
 	].filter((group) => piece.options.some((option) => option.group === group.key));
 
+	// The photograph is what the browser should assume it is being given: the
+	// measure, less its gutters, and the full viewport below that.
+	const photoSizes = "(min-width: 47.5rem) 43.5rem, 100vw";
+
 	return (
 		<main>
-			{/* The photograph leads. The first one is not lazy; the rest are. */}
-			<FullPhoto
-				image={piece.images[0] ?? null}
-				sizes="(min-width: 40rem) 50vw, 100vw"
-				priority
-			/>
+			{/*
+			 * **The piece leads, on cream, at 4:5.**
+			 *
+			 * `still` — it is the first thing on the page and there is nothing above
+			 * it to have arrived from. A reveal here would be the page hiding the
+			 * one thing the reader came for and then showing it.
+			 */}
+			<Section still className="measure pt-4">
+				<LeadPhoto image={piece.images[0] ?? null} sizes={photoSizes} priority />
+			</Section>
 
-			<h1>{piece.name}</h1>
-			{piece.sceneLine && <p>{piece.sceneLine}</p>}
-			{/* The base price immediately. A price, not a starting price *(R3)*. */}
-			{piece.price && <p>{formatMoney(piece.price)}</p>}
+			<Section className="measure pt-8">
+				{/* The theme he sets in the dashboard, above the name it belongs to. */}
+				{settings.collectionTheme && <p className="kicker">{settings.collectionTheme}</p>}
 
-			{/* Other views, and at least one close-up of the stitching — the proof. */}
+				<h1 className="mt-3 text-[clamp(2.375rem,7vw,3.625rem)] tracking-[-0.01em]">
+					{piece.name}
+				</h1>
+
+				{/* The scene in one line, in the italic — one of two places it is used. */}
+				{piece.sceneLine && (
+					<p className="serif-italic mt-4 max-w-[46ch] text-xl leading-snug text-(--ink-quiet) md:text-[1.4rem]">
+						{piece.sceneLine}
+					</p>
+				)}
+
+				{/* **The base price immediately. A price, not a starting price** *(R3)*. */}
+				{piece.price && (
+					<p className="mt-7 font-serif text-2xl">{formatMoney(piece.price)}</p>
+				)}
+
+				{/*
+				 * **The honest timeframe, framed as unrushed** *(R4, copy.md §10)*.
+				 * Hand-stitching means weeks and the page says so proudly. The priority
+				 * counterpart is not here — it sits beside the option that buys it,
+				 * and only while there is a queue to buy a place in.
+				 */}
+				{time.standardDays !== null && (
+					<p className="mt-6 text-(--ink-quiet)">
+						<span className="kicker block">{copy.piece.timeframeHeading}</span>
+						<span className="mt-1 block">
+							{fill(copy.piece.standardTimeframe, { days: formatDays(time.standardDays) })}
+						</span>
+					</p>
+				)}
+			</Section>
+
+			<div className="measure mt-12">
+				<Stitch />
+			</div>
+
+			{/* Other views, and at least one close-up of the stitching — the proof.
+			    Photographs, so this section is on cream. */}
 			{piece.images.length > 1 && (
-				<section>
-					<h2>{copy.piece.photosHeading}</h2>
-					{piece.images.slice(1).map((image) => (
-						<FullPhoto
-							key={image.storageKey}
-							image={image}
-							sizes="(min-width: 40rem) 50vw, 100vw"
-						/>
-					))}
-				</section>
-			)}
-
-			{/* The story, above the order block. In Phase 6 the scene redraws itself
-			    as line art alongside these words. */}
-			{piece.story && (
-				<section>
-					<h2>{copy.piece.storyHeading}</h2>
-					<p>{piece.story}</p>
-				</section>
+				<Section className="measure mt-12">
+					<h2 className="font-serif text-2xl md:text-3xl">{copy.piece.photosHeading}</h2>
+					<div className="mt-6 flex flex-col gap-6">
+						{piece.images.slice(1).map((image) => (
+							<FullPhoto key={image.storageKey} image={image} sizes={photoSizes} />
+						))}
+					</div>
+				</Section>
 			)}
 
 			{/*
-			 * The order block. It creates the order and redirects to its private page.
+			 * The story, above the order block.
 			 *
-			 * The timeframes are read *outside* the form, above it, because they are
-			 * what the piece costs in time rather than something to answer.
+			 * **On cloth, and this is where the warm palette is allowed to speak** —
+			 * there is no garment in this section, which is the whole of the test.
+			 * `garmentFree` is the assertion the type demands before the tone is
+			 * available at all.
+			 *
+			 * In a later round the scene redraws itself as line art alongside these
+			 * words. That is sketched, and not this round's.
 			 */}
-			<section>
-				{time.standardDays !== null && (
-					<>
-						<h2>{copy.piece.timeframeHeading}</h2>
-						<p>{fill(copy.piece.standardTimeframe, { days: formatDays(time.standardDays) })}</p>
-						{/* Only while the queue offset is non-zero. */}
-						{time.priorityDays !== null && (
-							<p>
-								{fill(copy.piece.priorityTimeframe, {
-									days: formatDays(time.priorityDays),
-								})}
-							</p>
-						)}
-					</>
+			{piece.story && (
+				<div className="measure mt-12">
+					<Section tone="tan" garmentFree className="rounded-sm px-7 py-10 md:px-9">
+						<h2 className="font-serif text-2xl md:text-3xl">{copy.piece.storyHeading}</h2>
+						<p className="mt-5 max-w-[60ch] text-lg leading-relaxed whitespace-pre-line">
+							{piece.story}
+						</p>
+					</Section>
+				</div>
+			)}
+
+			{/* ── THE ORDER BLOCK ──────────────────────────────────────────────── */}
+			<Section className="measure mt-16">
+				<h2 className="font-serif text-2xl leading-tight md:text-3xl">
+					{copy.piece.fitForkHeading}
+				</h2>
+
+				{/*
+				 * **One sentence, both cases, no country branch** *(R15)*. The `[X]` is
+				 * an unanswered founder question and stays visible: never invent the
+				 * number.
+				 *
+				 * copy.md §4 titles this sentence *"under the order button"*; it is read
+				 * here, before the fork, because it explains why the numbers about to
+				 * be asked for matter. The string is untouched.
+				 */}
+				<p className="mt-5 max-w-[64ch] text-(--ink-quiet)">{copy.piece.fit}</p>
+
+				{/* On a children's piece only, and never offered as a choice *(R13)*. */}
+				{piece.audience === "kids" && (
+					<p className="mt-3 max-w-[64ch] text-(--ink-quiet)">{copy.piece.kidsRoom}</p>
 				)}
 
 				<OrderRefusal error={e} copy={copy.order} />
@@ -154,32 +219,41 @@ export default async function Piece({
 					<input type="hidden" name="slug" value={piece.slug} />
 
 					{groups.length > 0 && (
-						<>
-							<h2>{copy.piece.optionsHeading}</h2>
-							{groups.map((group) => (
-								// A radio group rather than a select: every choice is visible,
-								// it works with no JavaScript, and a screen reader reads the
-								// group's own name. **A piece with one cut asks no question**
-								// — `groups` is already filtered to the ones he has set.
-								<fieldset key={group.key}>
-									<legend>{group.label}</legend>
-									{piece.options
-										.filter((option) => option.group === group.key)
-										.map((option, index) => (
-											<p key={`${group.key}:${option.key}`}>
-												<input
-													id={`${group.key}-${option.key}`}
-													name={`option_${group.key}`}
-													type="radio"
-													value={option.key}
-													defaultChecked={index === 0}
-												/>
-												<label htmlFor={`${group.key}-${option.key}`}>{option.label}</label>
-											</p>
-										))}
-								</fieldset>
-							))}
-						</>
+						<div className="mt-10">
+							<h3 className="font-serif text-2xl leading-tight md:text-3xl">
+								{copy.piece.optionsHeading}
+							</h3>
+							<div className="mt-6 flex flex-col gap-7">
+								{groups.map((group) => (
+									// A radio group rather than a select: every choice is visible,
+									// it works with no JavaScript, and a screen reader reads the
+									// group's own name. **A piece with one cut asks no question**
+									// — `groups` is already filtered to the ones he has set.
+									<fieldset key={group.key}>
+										<legend className="kicker mb-3">{group.label}</legend>
+										<div className="flex flex-wrap gap-2.5">
+											{piece.options
+												.filter((option) => option.group === group.key)
+												.map((option, index) => (
+													<span key={`${group.key}:${option.key}`}>
+														<input
+															id={`${group.key}-${option.key}`}
+															name={`option_${group.key}`}
+															type="radio"
+															value={option.key}
+															defaultChecked={index === 0}
+															className="sr-only"
+														/>
+														<label htmlFor={`${group.key}-${option.key}`} className="chip">
+															{option.label}
+														</label>
+													</span>
+												))}
+										</div>
+									</fieldset>
+								))}
+							</div>
+						</div>
 					)}
 
 					{/*
@@ -192,11 +266,21 @@ export default async function Piece({
 					 * page is a suggestion.
 					 */}
 					{time.priorityDays !== null && (
-						<>
-							<h2>{copy.order.form.priorityHeading}</h2>
-							<p>
-								<input id="priority" name="priority" type="checkbox" />
-								<label htmlFor="priority">
+						<fieldset className="mt-10">
+							<legend className="font-serif text-2xl leading-tight md:text-3xl">
+								{copy.order.form.priorityHeading}
+							</legend>
+
+							{/* The two timeframes, side by side, at the moment of choosing. */}
+							<p className="mt-4 max-w-[58ch] text-(--ink-quiet)">
+								{fill(copy.piece.priorityTimeframe, {
+									days: formatDays(time.priorityDays),
+								})}
+							</p>
+
+							<p className="mt-5">
+								<input id="priority" name="priority" type="checkbox" className="align-middle" />{" "}
+								<label htmlFor="priority" className="align-middle">
 									{fill(copy.order.form.priority, {
 										amount: formatMoney({
 											value: settings.priorityModifier,
@@ -205,18 +289,21 @@ export default async function Piece({
 									})}
 								</label>
 							</p>
-							<p>{copy.order.form.priorityNote}</p>
-						</>
+
+							<p className="mt-3 max-w-[58ch] text-sm text-(--ink-quiet)">
+								{copy.order.form.priorityNote}
+							</p>
+						</fieldset>
 					)}
 
 					{/*
-					 * The fit fork *(R7)*. **Measurements are the urged path and
-					 * therefore taught; a size is a real choice, not a fallback.**
+					 * The fit fork *(R7, amended for launch)*. **Standard sizing leads;
+					 * measurements are the invited second path** — and both ship in full.
 					 *
 					 * Bare on purpose: no JavaScript, no motion, a screen reader, every
 					 * instruction beside its own field rather than in a tooltip. The
-					 * live diagram is Phase 6 and reads these fields; it is never the
-					 * input mechanism.
+					 * live diagram is a sketched moment that reads these fields; it is
+					 * never the input mechanism.
 					 *
 					 * With no measurement list configured on the garment type there is
 					 * nothing to ask, and nothing is invented — he settles the numbers
@@ -232,44 +319,54 @@ export default async function Piece({
 							refused={f?.split(",").filter(Boolean) ?? []}
 						/>
 					) : (
-						<>
-							<h2>{copy.piece.fitForkHeading}</h2>
-							<p>{copy.piece.fitForkMeasurements}</p>
-							<p>{copy.piece.fitForkSize}</p>
-							<p>{copy.order.form.fitLater}</p>
-						</>
+						<div className="mt-12">
+							<p className="max-w-[58ch] text-(--ink-quiet)">{copy.piece.fitForkSize}</p>
+							<p className="mt-3 max-w-[58ch] text-(--ink-quiet)">
+								{copy.piece.fitForkMeasurements}
+							</p>
+							<p className="mt-5 max-w-[58ch] text-(--ink-quiet)">{copy.order.form.fitLater}</p>
+						</div>
 					)}
 
 					<OrderContactFields locale={locale} copy={copy.order.form} />
 
-					{/* **Never anything else.** */}
-					<p>
-						<button type="submit">{copy.piece.orderButton}</button>
+					{/* **Never anything else.** Not "Buy now", not "Add to cart". */}
+					<p className="mt-12">
+						<button type="submit" className="ask">
+							{copy.piece.orderButton}
+						</button>
 					</p>
 				</form>
 
 				{/* Three lines, exactly. They are what the button promises, so they are
 				    read with it and not tucked inside the form. */}
-				{copy.piece.beneathButton.map((line) => (
-					<p key={line}>{line}</p>
-				))}
-
-				{/* One sentence, both cases, no country branch *(R15)*. */}
-				<p>{copy.piece.fit}</p>
-				{/* On a children's piece only, and never offered as a choice *(R13)*. */}
-				{piece.audience === "kids" && <p>{copy.piece.kidsRoom}</p>}
-			</section>
+				<ul className="mt-7 list-none leading-loose text-(--ink-quiet)">
+					{copy.piece.beneathButton.map((line) => (
+						<li key={line}>{line}</li>
+					))}
+				</ul>
+			</Section>
 
 			{/* Bottom doors. */}
-			<p>
-				<Link href={path(locale, "making")}>{copy.piece.makingDoor}</Link>
-			</p>
-			<p>
-				<Link href={path(locale, "commissions")}>{copy.piece.commissionsDoor}</Link>
-			</p>
-			<p>
-				<Link href={path(locale, "collection")}>{copy.piece.back}</Link>
-			</p>
+			<Section className="measure mt-16 pb-4">
+				<ul className="flex flex-col gap-3 leading-relaxed">
+					<li>
+						<Link href={path(locale, "making")} className="stitch-link">
+							{copy.piece.makingDoor}
+						</Link>
+					</li>
+					<li>
+						<Link href={path(locale, "commissions")} className="stitch-link">
+							{copy.piece.commissionsDoor}
+						</Link>
+					</li>
+					<li>
+						<Link href={path(locale, "collection")} className="stitch-link">
+							{copy.piece.back}
+						</Link>
+					</li>
+				</ul>
+			</Section>
 		</main>
 	);
 }

@@ -55,10 +55,20 @@ document.documentElement.dataset.reveal='armed'
  * visitor opens would be armed, unobserved and therefore permanently invisible.
  * That is the failure this file most has to avoid, and React is not involved in
  * preventing it.
+ *
+ * **`innerHeight` is checked before anything is armed, and it is not paranoia.**
+ * The rule is `top < innerHeight` — is this section on screen already. With a
+ * viewport of zero height that is false for every section on the page, so every
+ * one of them is handed to the observer, and an observer against a zero-height
+ * viewport never reports an intersection. The result is a page that is armed,
+ * pending, and permanently blank. Caught in headless Chrome, which renders
+ * exactly that way; the honest reading is that any environment which cannot
+ * measure a viewport should not be running an animation in it.
  */
 export const SCAN = `(function(){
 var root=document.documentElement;
 if(root.dataset.reveal!=='armed')return;
+if(!innerHeight){root.removeAttribute('data-reveal');return}
 try{
 var io=new IntersectionObserver(function(entries){
 for(var i=0;i<entries.length;i++){

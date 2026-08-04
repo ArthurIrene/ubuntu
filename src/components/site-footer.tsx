@@ -60,7 +60,7 @@ export default function SiteFooter({ locale, copy }: { locale: Locale; copy: Con
 				 * unanswered founder question (foundation §13, item 8), so the bracket
 				 * stays visible rather than an invented URL shipping quietly.
 				 */}
-				<p className="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-sm text-[var(--ink-quiet)]">
+				<p className="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-sm text-(--ink-quiet)">
 					<span>
 						{copy.footer.instagram} {copy.handles[0]}
 					</span>
@@ -69,7 +69,7 @@ export default function SiteFooter({ locale, copy }: { locale: Locale; copy: Con
 					</span>
 				</p>
 
-				<p className="mt-10 max-w-prose text-sm leading-relaxed text-[var(--ink-quiet)]">
+				<p className="mt-10 max-w-prose text-sm leading-relaxed text-(--ink-quiet)">
 					{/* Nguni, and named as Nguni wherever it is explained *(R14)*. */}
 					<em className="serif-italic text-base">{copy.footer.maxim}</em>{" "}
 					{copy.footer.maximGloss}
