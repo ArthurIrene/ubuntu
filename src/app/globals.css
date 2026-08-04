@@ -1,6 +1,18 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════════════════════
+   THE DESIGN FOUNDATION — Phase 5, Round 1
+
+   Six colours, three faces, one rule about how they may be combined. Motion
+   here is the locked scroll reveal and nothing else; every sketched moment
+   (first arrival, page transitions, the scene drawing, hovers that sew
+   themselves, the running-stitch march, the live fit diagram, the ceremony) is
+   propose-before-build and deliberately absent.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
+	/* Only these six exist. Tailwind's default palette is cleared so that
+	   `bg-slate-50` is a build error rather than a colour nobody chose. */
 	--color-*: initial;
 
 	--color-transparent: transparent;
@@ -14,11 +26,281 @@
 	--color-hill:   #3D5A3E;   /* cloth */
 	--color-tan:    #E8C49A;   /* cloth */
 	--color-udongo: #C49A6C;   /* cloth */
+
+	/* The faces. `src/lib/fonts.ts` fills each variable; the fallbacks carry
+	   Next's synthesised metric adjustment, so a swap does not move a line. */
+	--font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+	--font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+	--font-script: var(--font-sacramento), cursive;
+
+	/* The italic cut is a family of its own so that it does not preload — see
+	   `src/lib/fonts.ts`. Reached through `.serif-italic`, never a bare `<em>`. */
+	--font-serif-italic: var(--font-fraunces-italic), Georgia, "Times New Roman", serif;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   THE COLOUR LAW, AS TOKENS
+
+   > *Strong colour and garment photos never share a section. Any section
+   > containing a product photo is on cream. The three cloth colours are only for
+   > sections with no garment in them. The clothes must always be the highest-
+   > contrast thing on the page.*
+
+   Naming the six by their hue makes the law a thing you have to remember.
+   Naming them by their **job** makes it something the stylesheet already knows,
+   so the aliases below are what page code reaches for.
+
+   `--thread` is the load-bearing one. Wine is a thread: a stitch, an underline,
+   a border, a rule. **Never a fill, never body text.** There is no
+   `--surface-wine`, and that absence is the control — `bg-wine` still exists as
+   a Tailwind utility because the token must be named `--color-wine`, so the
+   discipline lives in review, but nothing in this file offers it a home.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+	/* The canvas. Every section holding a garment photograph is this. */
+	--canvas: var(--color-cream);
+	--on-canvas: var(--color-ink);
+
+	/* A step down from cream, for a photograph's reserved space and for the
+	   quiet fills inside a form. Mixed from the ink so it stays the same
+	   temperature as the canvas rather than reading as a fourth colour. */
+	--canvas-shade: color-mix(in oklab, var(--color-ink) 5%, var(--color-cream));
+	--canvas-edge: color-mix(in oklab, var(--color-ink) 14%, var(--color-cream));
+
+	/* Body text is ink. A quieter ink for what supports it — never wine. */
+	--ink-quiet: color-mix(in oklab, var(--color-ink) 68%, var(--color-cream));
+
+	/* The thread. Lines only. */
+	--thread: var(--color-wine);
+
+	/* One running stitch, drawn once here and reused by every rule and
+	   underline on the site. Phase 6 animates the offset; nothing marches yet. */
+	--stitch: repeating-linear-gradient(
+		to right,
+		var(--thread) 0 0.5rem,
+		transparent 0.5rem 0.9rem
+	);
 }
 
 @layer base {
+	html {
+		/* The one place a scroll behaviour is set. Reduced motion turns it off
+		   below, with everything else. */
+		scroll-behavior: smooth;
+	}
+
 	body {
-		background-color: var(--color-cream);
-		color: var(--color-ink);
+		background-color: var(--canvas);
+		color: var(--on-canvas);
+		font-family: var(--font-sans);
+		/* Kinyarwanda runs ~30% longer and is agglutinative, so lines break
+		   later. A looser leading is what stops that reading as a wall. */
+		line-height: 1.65;
+		text-rendering: optimizeLegibility;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-serif);
+		font-weight: 400;
+		line-height: 1.12;
+		/* Fraunces is pinned to opsz 24 in the file itself, so a heading keeps
+		   the warm text-weight forms instead of walking up to the high-contrast
+		   display cut. Auto optical sizing has nothing left to vary — this
+		   declaration says so rather than leaving it to look like an oversight. */
+		font-optical-sizing: none;
+		text-wrap: balance;
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+
+	/*
+	 * **Keyboard focus is visible everywhere, and it is a thread.**
+	 *
+	 * `:focus-visible` rather than `:focus`, so a mouse click on a radio does not
+	 * draw a ring the pointer user did not ask for while a tab press still does.
+	 * Wine is legitimate here: an outline is a line.
+	 */
+	:focus-visible {
+		outline: 2px solid var(--thread);
+		outline-offset: 3px;
+		border-radius: 1px;
+	}
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   THE STITCH
+
+   A running stitch as a static rule. **Dividers are sketched, not locked** —
+   motion.md holds the marching version behind propose-before-build, and this is
+   the still one it will animate. The dash geometry is here so that when Phase 6
+   animates `background-position`, the stitch it moves is this stitch.
+   ────────────────────────────────────────────────────────────────────────── */
+@layer components {
+	/*
+	 * The measure. One reading column, 760px, and every band on the page shares
+	 * it — header, content, divider, footer — so the site reads as one sheet
+	 * rather than a stack of differently-sized boxes.
+	 *
+	 * A page of made-to-order clothing is mostly *reading*: a scene, a story, a
+	 * fit promise, three lines under a button. 760px keeps a line near 70
+	 * characters in English, and Kinyarwanda's extra ~30% lands at a length that
+	 * is still comfortable rather than at the edge of the viewport.
+	 */
+	.measure {
+		width: 100%;
+		max-width: 47.5rem;
+		margin-inline: auto;
+		padding-inline: 1.5rem;
+	}
+
+	/*
+	 * The scene line, and the maxim at the foot of every page.
+	 *
+	 * Both the family and the style, because the italic is a separate family
+	 * here — see `src/lib/fonts.ts` for why. Setting only `font-style` would get
+	 * a browser-synthesised slant of the roman, which on a serif looks like a
+	 * rendering fault rather than a typographic choice.
+	 */
+	.serif-italic {
+		font-family: var(--font-serif-italic);
+		font-style: italic;
+		font-optical-sizing: none;
+	}
+
+	/* A section divider. */
+	.stitch-rule {
+		border: 0;
+		height: 2px;
+		background-image: var(--stitch);
+		background-repeat: repeat-x;
+	}
+
+	/*
+	 * A nav item, and the stitch under the one you are on.
+	 *
+	 * The same running stitch the dividers use, so there is one thread on the
+	 * page and not two patterns that nearly match. It appears under the current
+	 * item, and under whichever item a pointer or the keyboard is resting on.
+	 *
+	 * **No transition, deliberately.** *One persistent nav stitch that sews
+	 * itself between items* is a locked Phase 6 moment, and *hovers that sew
+	 * themselves* are sketched — propose before building. A state that is simply
+	 * true or not true is styling, and that is all this is.
+	 */
+	.nav-link {
+		display: inline-block;
+		padding-bottom: 0.4rem;
+		color: var(--ink-quiet);
+		background-image: none;
+		background-repeat: repeat-x;
+		background-size: 100% 2px;
+		background-position: left bottom;
+	}
+
+	.nav-link:hover,
+	.nav-link:focus-visible,
+	.nav-link[aria-current="page"] {
+		color: var(--on-canvas);
+		background-image: var(--stitch);
+	}
+
+	/*
+	 * A link in running text: the stitch under a word rather than a browser
+	 * underline. Drawn as a background so that the dash pattern is the one the
+	 * dividers and the nav already use — one thread on the page, not three
+	 * patterns that nearly match.
+	 */
+	.stitch-link {
+		text-decoration: none;
+		background-image: var(--stitch);
+		background-repeat: repeat-x;
+		background-size: 100% 2px;
+		background-position: left calc(100% + 0.15em);
+		padding-bottom: 0.15em;
+	}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCROLL REVEALS — the one locked motion this round builds
+
+   > *Each section rises once — about 15px plus fade, ~500ms — staggered within:
+   > heading, then body, then image. Section-level, never paragraph-level. Fires
+   > once. Scrolling back up re-triggers nothing.*
+
+   **Nothing here hides anything by default.** The rules are gated behind
+   `:root[data-reveal="armed"]`, an attribute only `reveal.ts` sets, and it sets
+   it only after checking that motion is wanted and that `IntersectionObserver`
+   exists. So:
+
+   - **No JavaScript** → the attribute is never set → every section is simply
+     visible, and the order form works exactly as it does today.
+   - **`prefers-reduced-motion: reduce`** → the script returns before arming, and
+     the media query below unarms it even if something else set it. Reduced
+     motion gets **the finished state, never a half-played one.**
+   - **Already in view on load** → shown immediately with no transition, because
+     a reveal must *never be slower than a fast scroller*.
+
+   Scroll-driven CSS (`animation-timeline: view()`) was the obvious no-script
+   answer and is the wrong one: it is scroll-*linked*, so scrolling back up plays
+   it backwards. "Fires once, re-triggers nothing" is the whole character of this
+   moment — it is what makes the site still.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Direct children of a section are what stagger: heading, then body, then
+   image, which is DOM order on every page here. The delay caps after the third
+   so a section with ten children does not cascade down the page — **a long page
+   must not twitch all the way down.** */
+:root[data-reveal="armed"] [data-section] > * {
+	opacity: 0;
+	transform: translateY(15px);
+}
+
+:root[data-reveal="armed"] [data-section][data-shown] > * {
+	opacity: 1;
+	transform: none;
+	transition:
+		opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* **Cloth follows the line** — the third law. The heading leads, what it carries
+   settles behind it. */
+:root[data-reveal="armed"] [data-section][data-shown] > *:nth-child(2) {
+	transition-delay: 110ms;
+}
+:root[data-reveal="armed"] [data-section][data-shown] > *:nth-child(n + 3) {
+	transition-delay: 220ms;
+}
+
+/* In the first viewport at load. It is simply there. */
+:root[data-reveal="armed"] [data-section][data-immediate] > * {
+	transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	/* The finished state, unconditionally — this wins whatever the script did. */
+	:root[data-reveal="armed"] [data-section] > *,
+	:root[data-reveal="armed"] [data-section][data-shown] > * {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }

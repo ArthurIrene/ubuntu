@@ -19,7 +19,14 @@ import { storage } from "@/lib/storage";
  * focal point. Phase 5 owns everything about how this looks.
  */
 
-/** Cards crop 4:5, which is where the focal point earns its place *(R8)*. */
+/**
+ * Cards crop 4:5, which is where the focal point earns its place *(R8)*.
+ *
+ * The lead photograph on a piece's own page is the same crop, because R8's
+ * photography brief asks him for **a 4:5 portrait lead image per piece** — so
+ * the card and the page it opens are the same shape, and the one is the other
+ * enlarged.
+ */
 const CARD_ASPECT = "4 / 5";
 
 export interface PiecePhotoProps {
@@ -67,12 +74,19 @@ export function CardPhoto({ image, sizes, priority, alt }: PiecePhotoProps) {
 				 */
 				<div
 					aria-hidden="true"
-					style={{ position: "absolute", inset: 0, background: "var(--color-udongo)" }}
+					style={{ position: "absolute", inset: 0, background: "var(--canvas-shade)" }}
 				/>
 			)}
 		</div>
 	);
 }
+
+/**
+ * The lead photograph on a piece's own page — the same 4:5 crop, held at the
+ * same focal point, one size larger. Named for where it sits, because
+ * `CardPhoto` on a page that is not a card reads as a mistake.
+ */
+export const LeadPhoto = CardPhoto;
 
 /**
  * A photograph at its own proportions, filling the width it is given.
@@ -85,7 +99,7 @@ export function FullPhoto({ image, sizes, priority, alt }: PiecePhotoProps) {
 		return (
 			<div
 				aria-hidden="true"
-				style={{ aspectRatio: CARD_ASPECT, background: "var(--color-udongo)" }}
+				style={{ aspectRatio: CARD_ASPECT, background: "var(--canvas-shade)" }}
 			/>
 		);
 	}
