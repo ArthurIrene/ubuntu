@@ -321,8 +321,17 @@
 		background-image: var(--stitch);
 		background-repeat: repeat-x;
 		background-size: 100% 2px;
-		background-position: left calc(100% + 0.15em);
-		padding-bottom: 0.15em;
+		/*
+		 * `left bottom`, the same as `.nav-link` — **not `calc(100% + 0.15em)`,
+		 * which painted nothing.** A background is clipped to the border box, and
+		 * `100%` already means bottom-aligned; the extra `0.15em` pushed the
+		 * stitch past the edge and it was thrown away. Every in-text link on the
+		 * site rendered identical to body text: no underline, no colour of its
+		 * own, nothing but the cursor. Found on the two text pages, where the
+		 * only way out of the page is one of these.
+		 */
+		background-position: left bottom;
+		padding-bottom: 0.2em;
 	}
 }
 
