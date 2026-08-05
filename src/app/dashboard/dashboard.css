@@ -1,0 +1,755 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   THE WORKSHOP TOOL — Phase 5, Round 4
+
+   The dashboard is not the shop. It shares the six colours and it shares the
+   sans, and there the resemblance stops: **no Fraunces, no script wordmark, no
+   stitch, no scroll reveals, no 47.5rem measure.** Those are the language the
+   site speaks to a stranger who is deciding whether to trust it. This is the
+   language a man speaks to his own tools at eleven at night with a phone in one
+   hand, and it optimises for one thing — *find the thing, change it, be sure it
+   saved.*
+
+   ## Why this file is unlayered
+
+   `globals.css` sets every `h1`–`h4` in the serif inside `@layer base`, which is
+   correct for every page a customer reads and wrong for every page here. CSS
+   layers rank below unlayered rules whatever the specificity, so an unlayered
+   `.dash h1` beats a layered `h1` without an `!important` and without raising
+   specificity anywhere. Nothing here escapes `.dash`, which is set once on the
+   dashboard root layout's `<body>`.
+
+   The consequence to know about: an unlayered rule here also outranks a Tailwind
+   utility (those live in `@layer utilities`). So the element rules below claim
+   only properties a utility would not be reached for on the same element — and
+   where a page does want a utility to win, it wants a class from this file
+   instead. Everything is scoped `.dash …` for that reason.
+
+   ## Element-first, on purpose
+
+   Every screen here was written as plain semantic markup — `label`, `input`,
+   `select`, `button`, `table` — before it had a stylesheet. Styling the elements
+   rather than dressing each one in a class is what lets this round change how
+   the dashboard looks without touching what it does. A class is added only where
+   a decision cannot be read off the tag: which button is *the* button, which
+   list is a list of rows, which panel carries the job he came for.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dash {
+	/*
+	 * Three surfaces, all cream. The desk is a step down, the paper sits on it,
+	 * and the fields are the palest of the three so that *where you type* is the
+	 * brightest thing in a panel.
+	 *
+	 * No new hue enters here: `--canvas-shade` is the ink mixed into the cream
+	 * that `globals.css` already defines, and the field lightens the same cream
+	 * toward white rather than introducing a colour nobody chose.
+	 */
+	--desk: var(--canvas-shade);
+	--paper: var(--color-cream);
+	--field: color-mix(in oklab, #fff 62%, var(--color-cream));
+
+	/* The header, and the one place ink is a ground rather than a mark. A dark
+	   bar is what separates his tool from his shop at a glance on a phone. */
+	--bar: var(--color-ink);
+	--on-bar: var(--color-cream);
+
+	/* Wine stays a thread, exactly as on the site: rules, edges, the focus ring,
+	   and the marker down the side of something that wants him. Never a fill
+	   behind text. */
+	--edge: var(--canvas-edge);
+	--edge-strong: color-mix(in oklab, var(--color-ink) 26%, var(--color-cream));
+
+	background: var(--desk);
+	color: var(--on-canvas);
+	/* Tall phones with a browser chrome that comes and goes. */
+	min-height: 100dvh;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TYPE
+
+   The humanist sans, top to bottom. **The serif is not used here and neither is
+   the script**: the wordmark face is chosen against a founder wordmark that does
+   not exist yet (see `holding-page.tsx`), and a data-entry screen is the last
+   place to audition one. Headings are sized by their job — a screen name, a
+   panel name, a group inside a panel — and the ratio between them is small,
+   because on a scanning surface a heading is a signpost and not a statement.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash h1,
+.dash h2,
+.dash h3,
+.dash h4 {
+	font-family: var(--font-sans);
+	font-optical-sizing: auto;
+	text-wrap: balance;
+	letter-spacing: -0.01em;
+}
+
+.dash h1 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.dash h2 {
+	font-size: 1.0625rem;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.dash h3 {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.dash h4 {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1.35;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-quiet);
+}
+
+.dash {
+	/* Denser than the site's 1.65. That leading is for reading a story; this is
+	   for finding a number. */
+	line-height: 1.5;
+}
+
+/* Supporting text under a heading or beside a field: the sentence that explains
+   what a number does. Quiet ink, never wine. */
+.dash small,
+.dash .meta {
+	display: block;
+	font-size: 0.8125rem;
+	line-height: 1.45;
+	color: var(--ink-quiet);
+}
+
+/* A number that will be read in a column next to other numbers. */
+.dash .money {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   THE FRAME
+
+   Header, main, foot. One frame every screen sits in, sticky at the top so the
+   four sections are reachable from the bottom of a long order screen without a
+   scroll back up.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash-shell {
+	display: flex;
+	min-height: 100dvh;
+	flex-direction: column;
+}
+
+.dash-bar {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background: var(--bar);
+	color: var(--on-bar);
+	/* The one wine rule in the frame: a thread under the header, holding the
+	   dark bar off the cream. */
+	border-bottom: 2px solid var(--thread);
+}
+
+.dash-bar-inner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.625rem 1rem;
+}
+
+/*
+ * The four sections.
+ *
+ * They scroll horizontally rather than wrap, so the bar is one line high at
+ * 360px and the height of the sticky header is the same on every screen. The
+ * scrollbar is hidden because four items never overflow far enough to need one.
+ */
+.dash-nav ul {
+	display: flex;
+	gap: 0.25rem;
+	overflow-x: auto;
+	scrollbar-width: none;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dash-nav ul::-webkit-scrollbar {
+	display: none;
+}
+
+.dash-nav a {
+	display: block;
+	padding: 0.5rem 0.75rem;
+	border-radius: 3px;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	white-space: nowrap;
+	color: color-mix(in oklab, var(--color-cream) 72%, var(--color-ink));
+	text-decoration: none;
+}
+
+.dash-nav a:hover {
+	color: var(--on-bar);
+	background: color-mix(in oklab, var(--color-cream) 10%, transparent);
+}
+
+/*
+ * Where he is. A solid wine underline rather than the site's running stitch:
+ * the stitch is the shop's voice and a locked Phase 6 moment, and borrowing it
+ * for a nav state here would make a tool look like a page.
+ */
+.dash-nav a[aria-current="page"] {
+	color: var(--on-bar);
+	background: color-mix(in oklab, var(--color-cream) 14%, transparent);
+	box-shadow: inset 0 -2px 0 0 var(--thread);
+}
+
+/* The focus ring is wine on cream and invisible on ink, so it lightens here. */
+.dash-bar :focus-visible {
+	outline-color: var(--color-cream);
+}
+
+.dash-main {
+	flex: 1;
+	width: 100%;
+	/* Wider than the site's measure. This is a table of orders and a grid of
+	   bands, not a reading column. */
+	max-width: 64rem;
+	margin-inline: auto;
+	padding: 1.25rem 1rem 3rem;
+}
+
+.dash-main h1 {
+	margin-bottom: 1rem;
+}
+
+.dash-foot {
+	border-top: 1px solid var(--edge);
+	padding: 1.25rem 1rem 2rem;
+}
+
+.dash-foot-inner {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.625rem;
+	max-width: 64rem;
+	margin-inline: auto;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   PANELS
+
+   **The order screen is panels, not a timeline** *(R9c)*, and the same shape
+   carries every other screen: a bordered sheet of paper on the desk, its name at
+   the top. They stack on a phone, which is where he is.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash .panel {
+	background: var(--paper);
+	border: 1px solid var(--edge);
+	border-radius: 4px;
+	padding: 1rem;
+	margin-bottom: 0.875rem;
+}
+
+@media (min-width: 40rem) {
+	.dash .panel {
+		padding: 1.25rem 1.375rem;
+	}
+}
+
+.dash .panel > h2,
+.dash .panel > h3 {
+	margin-bottom: 0.75rem;
+}
+
+/*
+ * The job he came for.
+ *
+ * **The action the queue sent him for sits at the top** *(R9c)*, and this is the
+ * one panel allowed to raise its voice — a wine edge down the side. It is a
+ * line, not a fill, so the rule about wine holds.
+ */
+.dash .panel-lead {
+	border-left: 3px solid var(--thread);
+}
+
+/* A quieter block inside a panel: a group of fields that belong together, a
+   snapshot of what was chosen. */
+.dash .inset {
+	background: var(--desk);
+	border: 1px solid var(--edge);
+	border-radius: 3px;
+	padding: 0.75rem 0.875rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   FORMS — the product
+
+   Every screen here is a form. Labels sit above their field, fields are boxed
+   rather than ruled (the site's ruled line is a drawn gesture; a tool wants an
+   obvious target), and nothing is smaller than 44px in the direction a thumb
+   arrives from.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash label {
+	display: block;
+	margin-bottom: 0.25rem;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--ink-quiet);
+}
+
+/* A label that contains its own control — the checkbox rows — is a row, not a
+   heading over a field. `:has()` keeps that decision in the stylesheet rather
+   than making every checkbox in the dashboard carry a class. */
+.dash label:has(> input[type="checkbox"]),
+.dash label:has(> input[type="radio"]) {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0;
+	font-size: 0.9375rem;
+	font-weight: 400;
+	color: var(--on-canvas);
+	cursor: pointer;
+}
+
+.dash input,
+.dash select,
+.dash textarea {
+	display: block;
+	width: 100%;
+	min-height: 2.75rem;
+	padding: 0.5rem 0.625rem;
+	font: inherit;
+	font-size: 1rem; /* 16px: anything smaller and iOS zooms on focus. */
+	color: var(--on-canvas);
+	background: var(--field);
+	border: 1px solid var(--edge-strong);
+	border-radius: 3px;
+}
+
+.dash textarea {
+	min-height: 5rem;
+	line-height: 1.5;
+	resize: vertical;
+}
+
+.dash select {
+	/* The platform control, with room for its own arrow. */
+	padding-right: 2rem;
+	appearance: auto;
+}
+
+.dash input[type="checkbox"],
+.dash input[type="radio"] {
+	width: 1.125rem;
+	min-height: 0;
+	height: 1.125rem;
+	flex: none;
+	padding: 0;
+	accent-color: var(--thread);
+}
+
+.dash input[type="file"] {
+	padding: 0.5rem;
+	background: var(--desk);
+}
+
+.dash input:focus,
+.dash select:focus,
+.dash textarea:focus {
+	border-color: var(--thread);
+	outline: none;
+}
+
+/* `:focus-visible` still draws the ring from `globals.css` on top — a border
+   colour alone is not a focus indicator, and this whole tool is usable by
+   keyboard. */
+.dash input::placeholder,
+.dash textarea::placeholder {
+	color: color-mix(in oklab, var(--color-ink) 42%, var(--color-cream));
+}
+
+/*
+ * A stack of fields. The gap is what does the work: label and field are 4px
+ * apart, one field and the next are 14px apart, so the pairing is read before
+ * the sequence is.
+ */
+.dash .fields {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+/* Two or three short fields on one line once there is a line to share — a
+   price beside a number of days, four band values in a row. Below 40rem they
+   are simply stacked, because they are stacked everywhere he actually works. */
+.dash .fields-row {
+	display: grid;
+	gap: 0.875rem;
+}
+
+@media (min-width: 40rem) {
+	.dash .fields-row {
+		grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+	}
+}
+
+/* The bar at the foot of a form. Buttons go full width on a phone and shrink to
+   their content once there is room. */
+.dash .form-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 1rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BUTTONS
+
+   Three weights and no more: the one that does the thing, the ones beside it,
+   and the ones that end something. **No bulk anything, anywhere** *(R9a)* —
+   there is no styling here for a control this dashboard must never grow.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash button,
+.dash .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	min-height: 2.75rem;
+	padding: 0.5rem 1rem;
+	font: inherit;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	color: var(--on-canvas);
+	background: var(--paper);
+	border: 1px solid var(--edge-strong);
+	border-radius: 3px;
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.dash button:hover,
+.dash .button:hover {
+	border-color: var(--on-canvas);
+}
+
+/* The one that does the thing. Ink, filled — the highest contrast on the
+   screen, which is what "obvious" has to mean on a phone in daylight. */
+.dash .btn-primary {
+	color: var(--color-cream);
+	background: var(--color-ink);
+	border-color: var(--color-ink);
+}
+
+.dash .btn-primary:hover {
+	background: color-mix(in oklab, #000 18%, var(--color-ink));
+}
+
+/*
+ * An ending: decline, cancel, delete, sign out everywhere.
+ *
+ * Wine as an edge and wine as the word, never as a ground — the same rule the
+ * site keeps. It reads as consequence without becoming a warning box, because
+ * three of these sit in a row on the order screen and a row of red boxes would
+ * make the ordinary one look dangerous.
+ */
+.dash .btn-ending {
+	color: var(--thread);
+	border-color: color-mix(in oklab, var(--thread) 45%, var(--color-cream));
+	background: transparent;
+}
+
+.dash .btn-ending:hover {
+	border-color: var(--thread);
+	background: color-mix(in oklab, var(--thread) 7%, transparent);
+}
+
+/* Small and quiet: the control that lives on a row rather than under a form. */
+.dash .btn-small {
+	min-height: 2.25rem;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.875rem;
+}
+
+.dash button:disabled,
+.dash .btn-primary:disabled {
+	color: var(--ink-quiet);
+	background: var(--desk);
+	border-color: var(--edge);
+	cursor: not-allowed;
+}
+
+/* A link that behaves like a button in a row of them. */
+.dash .link {
+	color: var(--on-canvas);
+	text-decoration: underline;
+	text-decoration-color: var(--edge-strong);
+	text-underline-offset: 0.2em;
+}
+
+.dash .link:hover {
+	text-decoration-color: var(--thread);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ROWS, TAGS, MESSAGES
+   ────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * A list of things, each of which is a row: payments, photographs, options,
+ * garment types, the log. Bulleted lists were what the unstyled build had; a
+ * ruled stack is what makes twelve of anything scannable.
+ */
+.dash ul.rows,
+.dash ol.rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid var(--edge);
+}
+
+.dash ul.rows > li,
+.dash ol.rows > li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	padding: 0.75rem 0;
+	border-bottom: 1px solid var(--edge);
+}
+
+/* A row whose contents stack rather than sit on one line — a piece with a
+   photograph and three fields under it. */
+.dash ul.rows > li.stacked {
+	display: block;
+}
+
+/* Pushes what follows it to the far end of the row: the control on a row of
+   facts. */
+.dash .row-end {
+	margin-left: auto;
+}
+
+/*
+ * A state, as a mark rather than a sentence: draft · live · removed, a status
+ * label, a count. Cream ground, ink edge, and no colour coding — *live* and
+ * *removed* are facts about a piece, not a warning and a success.
+ */
+.dash .tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.125rem 0.5rem;
+	border: 1px solid var(--edge-strong);
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	color: var(--ink-quiet);
+	background: var(--desk);
+}
+
+/* The one state that is emphatically *on the site*, so it carries ink. */
+.dash .tag-live {
+	color: var(--color-cream);
+	background: var(--color-ink);
+	border-color: var(--color-ink);
+}
+
+/* A count beside a heading — *confirm a price · 3*. */
+.dash .tag-count {
+	color: var(--color-cream);
+	background: var(--thread);
+	border-color: var(--thread);
+	font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Anything the page announces: the refusals on the order screen, the publish
+ * floor on a piece, the band that does not nest. A thread down the side and the
+ * desk behind it — loud enough to stop him, quiet enough that being stopped
+ * twice in a row does not read as the tool being broken.
+ */
+.dash [role="alert"],
+.dash .notice {
+	margin: 0 0 0.875rem;
+	padding: 0.75rem 0.875rem;
+	border: 1px solid var(--edge);
+	border-left: 3px solid var(--thread);
+	border-radius: 3px;
+	background: var(--paper);
+	font-size: 0.9375rem;
+}
+
+/* A plain confirmation — *Saved.* — is not an alarm and does not get a thread. */
+.dash .notice-quiet {
+	border-left-color: var(--edge-strong);
+	color: var(--ink-quiet);
+}
+
+/*
+ * A filter strip: All · Collection · Only yours.
+ *
+ * They are links rather than a control, because the filter is in the URL and
+ * has to survive being bookmarked and shared with himself.
+ */
+.dash .filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin-bottom: 1rem;
+}
+
+.dash .filters a {
+	padding: 0.375rem 0.75rem;
+	border: 1px solid var(--edge-strong);
+	border-radius: 999px;
+	font-size: 0.875rem;
+	color: var(--on-canvas);
+	text-decoration: none;
+	background: var(--paper);
+}
+
+.dash .filters a:hover {
+	border-color: var(--on-canvas);
+}
+
+.dash .filters a[aria-current="page"] {
+	color: var(--color-cream);
+	background: var(--color-ink);
+	border-color: var(--color-ink);
+}
+
+/* Where a screen goes back to. */
+.dash .breadcrumb {
+	display: inline-block;
+	margin-bottom: 0.625rem;
+	font-size: 0.875rem;
+	color: var(--ink-quiet);
+	text-decoration: none;
+}
+
+.dash .breadcrumb:hover {
+	color: var(--on-canvas);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DISCLOSURES
+
+   *Take an order yourself*, *Start a new piece*, *Enter a set of numbers*, and
+   the event log. Each is a real `<details>` — no script, works with the keyboard,
+   and closed by default because none of them is the reason he opened the screen.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash details {
+	background: var(--paper);
+	border: 1px solid var(--edge);
+	border-radius: 4px;
+	margin-bottom: 0.875rem;
+}
+
+/* A `<details>` inside a panel is already on paper; it takes the desk instead so
+   the nesting reads. */
+.dash .panel details {
+	background: var(--desk);
+}
+
+.dash summary {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.875rem 1rem;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	cursor: pointer;
+	list-style: none;
+}
+
+.dash summary::-webkit-details-marker {
+	display: none;
+}
+
+/* The marker, drawn rather than glyphed: a caret that turns when it opens. It is
+   the one thing in the dashboard that moves, it moves only under a finger, and
+   `prefers-reduced-motion` takes the movement away below. */
+.dash summary::before {
+	content: "";
+	width: 0.4rem;
+	height: 0.4rem;
+	border-right: 1.5px solid var(--thread);
+	border-bottom: 1.5px solid var(--thread);
+	transform: rotate(-45deg);
+	transition: transform 120ms ease;
+	flex: none;
+}
+
+.dash details[open] > summary::before {
+	transform: rotate(45deg);
+}
+
+.dash details > *:not(summary) {
+	padding: 0 1rem 1rem;
+}
+
+.dash details[open] > summary {
+	border-bottom: 1px solid var(--edge);
+	margin-bottom: 1rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TABLES
+
+   One table in the whole dashboard — the confirmed price breakdown — and it is a
+   table because it is genuinely tabular: a label, a number, a total.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9375rem;
+}
+
+.dash th,
+.dash td {
+	padding: 0.5rem 0;
+	text-align: left;
+	border-bottom: 1px solid var(--edge);
+	vertical-align: top;
+}
+
+.dash td + td {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.dash tr:last-child td {
+	border-bottom: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   IMAGES
+   ────────────────────────────────────────────────────────────────────────── */
+.dash img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	border-radius: 3px;
+	background: var(--desk);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dash summary::before {
+		transition: none;
+	}
+}

@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { requireSession } from "@/lib/auth";
 
 import { signOut, signOutEverywhere } from "../login/actions";
+import DashboardNav from "./nav";
 
 /**
  * The gate, and the four sections.
@@ -26,41 +25,48 @@ export default async function DashboardLayout({ children }: { children: React.Re
 	await requireSession();
 
 	return (
-		<>
-			<header>
-				<nav aria-label="Dashboard">
-					<ul>
-						<li>
-							<Link href="/dashboard">Today</Link>
-						</li>
-						<li>
-							<Link href="/dashboard/orders">Orders</Link>
-						</li>
-						<li>
-							<Link href="/dashboard/pieces">Pieces</Link>
-						</li>
-						<li>
-							<Link href="/dashboard/settings">Settings</Link>
-						</li>
-					</ul>
-				</nav>
+		<div className="dash-shell">
+			{/*
+			 * **Sticky, and dark.** Sticky because the order screen is long and the
+			 * four sections should not cost a scroll back to the top; dark because
+			 * the one thing the frame has to say before anything else is *this is
+			 * the workshop, not the shop.* It is the only place ink is a ground.
+			 */}
+			<header className="dash-bar">
+				<div className="dash-bar-inner">
+					<DashboardNav />
+				</div>
 			</header>
 
-			{children}
+			{/*
+			 * A `div`, not a `main`: every screen below renders its own `<main>`,
+			 * and a document has one. This is the column they sit in.
+			 */}
+			<div className="dash-main">{children}</div>
 
-			<footer>
-				<form action={signOut}>
-					<button type="submit">Sign out</button>
-				</form>
-				{/*
-				 * The kill switch, reachable from every screen because the moment it
-				 * is wanted is the moment nobody wants to go looking for it. It is
-				 * line one of the incident plan on paper.
-				 */}
-				<form action={signOutEverywhere}>
-					<button type="submit">Sign out everywhere</button>
-				</form>
+			<footer className="dash-foot">
+				<div className="dash-foot-inner">
+					<form action={signOut}>
+						<button type="submit" className="btn-small">
+							Sign out
+						</button>
+					</form>
+					{/*
+					 * The kill switch, reachable from every screen because the moment it
+					 * is wanted is the moment nobody wants to go looking for it. It is
+					 * line one of the incident plan on paper.
+					 *
+					 * Styled as an ending rather than as a button beside it: it closes
+					 * every session he has, and it sits next to the one that closes this
+					 * browser's.
+					 */}
+					<form action={signOutEverywhere}>
+						<button type="submit" className="btn-small btn-ending">
+							Sign out everywhere
+						</button>
+					</form>
+				</div>
 			</footer>
-		</>
+		</div>
 	);
 }
