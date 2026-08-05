@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { isMeasurementKey, toCanonical } from "@/content/measurements";
 import { getDb, schema } from "@/db/client";
+import { isDuplicate } from "@/db/errors";
 import { auth, requireSession } from "@/lib/auth";
 import { email as mailer } from "@/lib/email";
 import { signInEmail } from "@/emails/sign-in";
@@ -153,14 +154,23 @@ export async function saveGarmentType(form: FormData): Promise<void> {
 		updatedAt: new Date(),
 	};
 
-	if (garmentTypeId) {
-		await db
-			.update(schema.garmentTypes)
-			.set(values)
-			.where(eq(schema.garmentTypes.id, garmentTypeId));
-	} else {
-		if (!values.key || !values.name) return;
-		await db.insert(schema.garmentTypes).values(values);
+	try {
+		if (garmentTypeId) {
+			await db
+				.update(schema.garmentTypes)
+				.set(values)
+				.where(eq(schema.garmentTypes.id, garmentTypeId));
+		} else {
+			if (!values.key || !values.name) return;
+			await db.insert(schema.garmentTypes).values(values);
+		}
+	} catch (error) {
+		// `garment_types.key` is unique — it is what the code joins on — and the
+		// same hole the pieces slug had: a second type keyed `hat` was a raw 500 on
+		// the screen he sets the shop up on. One error becomes a sentence; the rest
+		// still throw.
+		if (isDuplicate(error)) redirect("/dashboard/settings?e=key");
+		throw error;
 	}
 
 	revalidatePath("/dashboard/settings");

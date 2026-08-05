@@ -91,6 +91,17 @@ export default async function PieceScreen({
 					Not ready to publish. It still needs {missing}.
 				</p>
 			)}
+			{/*
+			 * He typed a slug another piece holds. The rest of the form did not
+			 * save, which the sentence says rather than leaving him to discover it
+			 * by comparing fields.
+			 */}
+			{e === "slug" && (
+				<p role="alert">
+					Another piece already uses that slug, so nothing here was saved. Two pieces cannot
+					share an address on the site — give this one a slug of its own and save again.
+				</p>
+			)}
 			{e === "orders" && (
 				<p role="alert">
 					This piece has {orderCount} order{orderCount === 1 ? "" : "s"}, so it cannot be

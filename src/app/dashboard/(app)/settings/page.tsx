@@ -70,6 +70,16 @@ export default async function Settings({
 				</p>
 			)}
 			{e === "bands" && <p role="alert">All four band values are needed.</p>}
+			{/*
+			 * The key is what the code joins on and it is never renamed, so two
+			 * types cannot share one. Same shape as the pieces slug, same reason.
+			 */}
+			{e === "key" && (
+				<p role="alert">
+					Another garment type already uses that key. The key is what the code joins on, so no
+					two can share one — give this one a key of its own.
+				</p>
+			)}
 			{e === "measurement" && <p role="alert">That is not a measurement the drawing knows.</p>}
 			{e === "stale" && <p role="alert">That needs a fresh link. Ask for one below.</p>}
 			{e === "email" && <p role="alert">The address could not be changed. It is unchanged.</p>}

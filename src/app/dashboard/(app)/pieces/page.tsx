@@ -22,10 +22,10 @@ export const dynamic = "force-dynamic";
 export default async function Pieces({
 	searchParams,
 }: {
-	searchParams: Promise<{ kind?: string }>;
+	searchParams: Promise<{ kind?: string; e?: string }>;
 }) {
 	await requireSession();
-	const { kind } = await searchParams;
+	const { kind, e } = await searchParams;
 	const db = await getDb();
 
 	const filter = kind === "commission" ? "commission" : "collection";
@@ -68,6 +68,19 @@ export default async function Pieces({
 					Only yours
 				</Link>
 			</p>
+
+			{/*
+			 * **The slug is the address a piece has on the site**, and it is derived
+			 * from the name here — so a second *Summer* collides. Nothing is
+			 * invented to get around it: no `-2`, no timestamp. He renames it, or he
+			 * opens the piece that already holds the name.
+			 */}
+			{e === "slug" && (
+				<p role="alert">
+					A piece already has that name, and two pieces cannot share an address on the site.
+					Give this one a different name — or open the piece that already has it.
+				</p>
+			)}
 
 			{garmentTypes.length === 0 && (
 				/* A standing condition, not an announcement: `notice` rather than
