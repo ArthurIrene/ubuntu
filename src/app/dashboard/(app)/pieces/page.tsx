@@ -57,82 +57,124 @@ export default async function Pieces({
 		<main>
 			<h1>Pieces</h1>
 
-			<p>
-				<Link href="/dashboard/pieces">Collection</Link> ·{" "}
-				<Link href="/dashboard/pieces?kind=commission">Only yours</Link>
+			<p className="filters">
+				<Link href="/dashboard/pieces" aria-current={filter === "collection" ? "page" : undefined}>
+					Collection
+				</Link>
+				<Link
+					href="/dashboard/pieces?kind=commission"
+					aria-current={filter === "commission" ? "page" : undefined}
+				>
+					Only yours
+				</Link>
 			</p>
 
 			{garmentTypes.length === 0 && (
-				<p>
+				/* A standing condition, not an announcement: `notice` rather than
+				   `role="alert"`, which would have a screen reader interrupt for
+				   something that was true before the page opened. */
+				<p className="notice">
 					There are no garment types yet, and a piece needs one.{" "}
-					<Link href="/dashboard/settings">Settings</Link> is where they live.
+					<Link href="/dashboard/settings" className="link">
+						Settings
+					</Link>{" "}
+					is where they live.
 				</p>
 			)}
 
-			<ul>
-				{pieces.map((piece) => (
-					<li key={piece.id}>
-						<Link href={`/dashboard/pieces/${piece.id}`}>{piece.name}</Link> ·{" "}
-						{/*
-						 * **Removed and draft look identical to the public and are
-						 * different facts** *(R9b)*. This is where the difference shows.
-						 */}
-						{piece.state}
-						{piece.basePrice !== null &&
-							` · ${formatMoney({ value: piece.basePrice, currency: piece.currency })}`}
-						{piece.makingDays !== null && ` · ${piece.makingDays} days`}
-						{piece.reborn && " · reborn"}
+			<div className="panel">
+				<ul className="rows">
+					{pieces.map((piece) => (
+						<li key={piece.id} className="stacked">
+							<div className="flex flex-wrap items-center gap-2">
+								<Link href={`/dashboard/pieces/${piece.id}`} className="link font-medium">
+									{piece.name}
+								</Link>
+								{/*
+								 * **Removed and draft look identical to the public and are
+								 * different facts** *(R9b)*. This is where the difference
+								 * shows — and only *live* is filled, because only one of the
+								 * three means a stranger can see it.
+								 */}
+								<span className={`tag${piece.state === "live" ? " tag-live" : ""}`}>
+									{piece.state}
+								</span>
+								{piece.reborn && <span className="tag">reborn</span>}
+							</div>
 
-						{filter === "collection" && piece.state === "live" && (
-							<form action={toggleWindow}>
-								<input type="hidden" name="pieceId" value={piece.id} />
-								<button type="submit">
-									{inWindow.has(piece.id) ? "Take out of the window" : "Put in the window"}
-								</button>
-							</form>
-						)}
-					</li>
-				))}
-				{pieces.length === 0 && <li>None yet.</li>}
-			</ul>
+							<p className="meta mt-1">
+								{piece.basePrice !== null && (
+									<span className="money">
+										{formatMoney({ value: piece.basePrice, currency: piece.currency })}
+									</span>
+								)}
+								{piece.basePrice !== null && piece.makingDays !== null && " · "}
+								{piece.makingDays !== null && `${piece.makingDays} days`}
+							</p>
 
-			<h2>The window display</h2>
-			<p>
-				{/*
-				 * **His hand choosing what a stranger meets first** *(R1, R10)* — not
-				 * simply the four most recent, which is what the collection page
-				 * already answers.
-				 */}
-				{inWindow.size === 0
-					? "Nothing chosen yet. This is what a stranger meets first."
-					: `${inWindow.size} chosen.`}
-			</p>
+							{filter === "collection" && piece.state === "live" && (
+								<form action={toggleWindow} className="mt-2">
+									<input type="hidden" name="pieceId" value={piece.id} />
+									<button type="submit" className="btn-small">
+										{inWindow.has(piece.id) ? "Take out of the window" : "Put in the window"}
+									</button>
+								</form>
+							)}
+						</li>
+					))}
+					{pieces.length === 0 && <li className="meta">None yet.</li>}
+				</ul>
+			</div>
+
+			<section className="panel">
+				<h2>The window display</h2>
+				<p className="meta">
+					{/*
+					 * **His hand choosing what a stranger meets first** *(R1, R10)* — not
+					 * simply the four most recent, which is what the collection page
+					 * already answers.
+					 */}
+					{inWindow.size === 0
+						? "Nothing chosen yet. This is what a stranger meets first."
+						: `${inWindow.size} chosen.`}
+				</p>
+			</section>
 
 			<details>
 				<summary>Start a new piece</summary>
 				{/* **Draft on create**, so he can work for weeks and nothing leaks. */}
-				<form action={createPiece}>
-					<label htmlFor="name">Name</label>
-					<input id="name" name="name" type="text" required />
+				<form action={createPiece} className="fields">
+					<div>
+						<label htmlFor="name">Name</label>
+						<input id="name" name="name" type="text" required />
+					</div>
 
-					<label htmlFor="garmentTypeId">Garment type</label>
-					<select id="garmentTypeId" name="garmentTypeId" required>
-						{garmentTypes.map((type) => (
-							<option key={type.id} value={type.id}>
-								{type.name}
-							</option>
-						))}
-					</select>
+					<div className="fields-row">
+						<div>
+							<label htmlFor="garmentTypeId">Garment type</label>
+							<select id="garmentTypeId" name="garmentTypeId" required>
+								{garmentTypes.map((type) => (
+									<option key={type.id} value={type.id}>
+										{type.name}
+									</option>
+								))}
+							</select>
+						</div>
 
-					<label htmlFor="kind">Kind</label>
-					<select id="kind" name="kind" defaultValue={filter}>
-						<option value="collection">collection</option>
-						<option value="commission">only yours</option>
-					</select>
+						<div>
+							<label htmlFor="kind">Kind</label>
+							<select id="kind" name="kind" defaultValue={filter}>
+								<option value="collection">collection</option>
+								<option value="commission">only yours</option>
+							</select>
+						</div>
+					</div>
 
-					<button type="submit" disabled={garmentTypes.length === 0}>
-						Create it as a draft
-					</button>
+					<div className="form-actions">
+						<button type="submit" className="btn-primary" disabled={garmentTypes.length === 0}>
+							Create it as a draft
+						</button>
+					</div>
 				</form>
 			</details>
 		</main>
