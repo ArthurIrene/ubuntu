@@ -183,16 +183,26 @@ export default async function OrderScreen({
 
 	return (
 		<main>
-			<p>
-				<Link href="/dashboard/orders">Orders</Link>
-			</p>
+			<Link href="/dashboard/orders" className="breadcrumb">
+				Orders
+			</Link>
 
 			<h1>
 				{order.customerName ?? "A redacted customer"} — {order.pieceName ?? "a commission"}
 			</h1>
-			<p>
-				{STATUS_LABEL[now]} · {order.kind} · {order.locale} ·{" "}
-				{order.preferredChannel === "whatsapp" ? "prefers WhatsApp" : "prefers email"}
+
+			{/*
+			 * What this order *is*, in four marks: where it has got to, which kind it
+			 * is, which language every email will be written in, and which channel he
+			 * owes them. The status leads because it is the one that changes.
+			 */}
+			<p className="mb-4 flex flex-wrap items-center gap-1.5">
+				<span className="tag tag-live">{STATUS_LABEL[now]}</span>
+				<span className="tag">{order.kind}</span>
+				<span className="tag">{order.locale}</span>
+				<span className="tag">
+					{order.preferredChannel === "whatsapp" ? "prefers WhatsApp" : "prefers email"}
+				</span>
 			</p>
 
 			{e === "fit" && (
@@ -216,9 +226,9 @@ export default async function OrderScreen({
 			 * weeks of panels.
 			 */}
 			{actions.length > 0 && (
-				<section>
+				<section className="panel panel-lead">
 					<h2>Waiting on you</h2>
-					<ul>
+					<ul className="rows">
 						{actions.map((action, index) => (
 							<li key={index}>{ACTION_HEADING[action.key]}</li>
 						))}
@@ -227,12 +237,12 @@ export default async function OrderScreen({
 			)}
 
 			{/* ── Money ─────────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>Money</h2>
 
 				{order.confirmedAt ? (
 					<>
-						<p>Confirmed {order.confirmedAt.toISOString().slice(0, 10)}</p>
+						<p className="meta mb-2">Confirmed {order.confirmedAt.toISOString().slice(0, 10)}</p>
 						<table>
 							<tbody>
 								{priceLines.map((line) => (
@@ -258,152 +268,215 @@ export default async function OrderScreen({
 					 * written as its own named line in the snapshot rather than a
 					 * silently different base. That is what answers *why 51,000?*
 					 */
-					<form action={confirmPrice}>
+					<form action={confirmPrice} className="fields">
 						<input type="hidden" name="orderId" value={order.id} />
 
 						{/*
 						 * What they chose, snapshotted when they asked. These lines are
 						 * carried through confirmation untouched and added into the total
-						 * — he is confirming the base, not re-entering their order.
+						 * — he is confirming the base, not re-entering their order. Set on
+						 * the desk rather than as fields, because they are not his to
+						 * change here.
 						 */}
 						{priceLines.filter((line) => line.kind !== "base").length > 0 && (
-							<ul>
+							<ul className="inset">
 								{priceLines
 									.filter((line) => line.kind !== "base")
 									.map((line) => (
-										<li key={line.id}>
-											{line.label} · {cash(line.amount)}
+										<li key={line.id} className="meta">
+											{line.label} · <span className="money">{cash(line.amount)}</span>
 										</li>
 									))}
 							</ul>
 						)}
 
-						<label htmlFor="base">The piece</label>
-						<input
-							id="base"
-							name="base"
-							type="number"
-							defaultValue={order.pieceBasePrice ?? undefined}
-							required
-						/>
+						<div className="fields-row">
+							<div>
+								<label htmlFor="base">The piece</label>
+								<input
+									id="base"
+									name="base"
+									type="number"
+									defaultValue={order.pieceBasePrice ?? undefined}
+									required
+								/>
+							</div>
 
-						<label htmlFor="adjustment">Adjustment, if any</label>
-						<input id="adjustment" name="adjustment" type="number" />
+							<div>
+								<label htmlFor="adjustment">Adjustment, if any</label>
+								<input id="adjustment" name="adjustment" type="number" />
+							</div>
+						</div>
 
-						<label htmlFor="reason">Why — required on any adjustment</label>
-						<input id="reason" name="reason" type="text" />
+						{/*
+						 * **Reason required on any adjustment** *(R9c)*, written as its own
+						 * named line in the snapshot. It sits at full width directly under
+						 * the number it explains, because that is the pairing.
+						 */}
+						<div>
+							<label htmlFor="reason">Why — required on any adjustment</label>
+							<input id="reason" name="reason" type="text" />
+						</div>
 
 						{order.kind === "commission" && (
-							<>
+							<div>
 								<label htmlFor="designFee">Design fee</label>
 								<input id="designFee" name="designFee" type="number" />
-							</>
+							</div>
 						)}
 
 						{/* One of the four that carry his personal note *(R9d)*. */}
-						<label htmlFor="note">A note to them, if you want one</label>
-						<textarea id="note" name="note" rows={3} />
+						<div>
+							<label htmlFor="note">A note to them, if you want one</label>
+							<textarea id="note" name="note" rows={3} />
+						</div>
 
-						<button type="submit">Confirm the price</button>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary">
+								Confirm the price
+							</button>
+						</div>
 					</form>
 				)}
 
-				<h3>The gates</h3>
-				<ul>
+				<h3 className="mt-6">The gates</h3>
+				<ul className="rows">
 					{gates(facts).map((entry, index) => (
 						<li key={index}>
-							{entry.gate ?? "the piece"} — {cash(entry.amount)} · paid{" "}
-							{cash(netPaid(facts, entry.gate))}
+							<span>{entry.gate ?? "the piece"}</span>
+							<span className="row-end money">
+								{cash(entry.amount)} · paid {cash(netPaid(facts, entry.gate))}
+							</span>
 						</li>
 					))}
 				</ul>
-				<p>
+				<p className="meta mt-2">
 					Net received {cash(netPaid(facts))}
 					{openGate(facts) ? ` · ${openGate(facts)?.gate ?? "the piece"} still open` : ""}
 				</p>
 
-				<h3>Payments</h3>
-				<ul>
+				<h3 className="mt-6">Payments</h3>
+				<ul className="rows">
 					{payments.map((payment) => (
 						<li key={payment.id}>
-							{cash(payment.amount)} · {payment.type} · {payment.method} ·{" "}
-							{payment.gate ?? "the piece"} ·{" "}
-							{payment.confirmedAt
-								? `confirmed ${payment.confirmedAt.toISOString().slice(0, 10)}`
-								: payment.reported
-									? "reported by them, not yet confirmed"
-									: "unconfirmed"}
+							<span className="money font-medium">{cash(payment.amount)}</span>
+							<span className="meta">
+								{payment.type} · {payment.method} · {payment.gate ?? "the piece"}
+							</span>
+							{/*
+							 * **A customer-reported payment is a payment row awaiting his
+							 * confirmation, never an order state** *(R5)*. Which of the three
+							 * it is, as a mark, because this is the fact the money panel is
+							 * read for.
+							 */}
+							<span className="tag row-end">
+								{payment.confirmedAt
+									? `confirmed ${payment.confirmedAt.toISOString().slice(0, 10)}`
+									: payment.reported
+										? "reported by them, not yet confirmed"
+										: "unconfirmed"}
+							</span>
 						</li>
 					))}
-					{payments.length === 0 && <li>Nothing yet.</li>}
+					{payments.length === 0 && <li className="meta">Nothing yet.</li>}
 				</ul>
 
-				<form action={recordPayment}>
+				<form action={recordPayment} className="fields mt-5">
 					<input type="hidden" name="orderId" value={order.id} />
-					<label htmlFor="amount">Record a payment</label>
-					<input id="amount" name="amount" type="number" required />
-					<label htmlFor="gate">Against</label>
-					<select id="gate" name="gate" defaultValue="">
-						<option value="">the piece</option>
-						<option value="design_fee">design fee</option>
-						<option value="cutting">cutting</option>
-						<option value="balance">balance</option>
-					</select>
-					<label htmlFor="reference">Reference</label>
-					<input id="reference" name="reference" type="text" />
-					<button type="submit">Record it</button>
+					<div className="fields-row" style={{ "--cols": 3 } as React.CSSProperties}>
+						<div>
+							<label htmlFor="amount">Record a payment</label>
+							<input id="amount" name="amount" type="number" required />
+						</div>
+						<div>
+							<label htmlFor="gate">Against</label>
+							<select id="gate" name="gate" defaultValue="">
+								<option value="">the piece</option>
+								<option value="design_fee">design fee</option>
+								<option value="cutting">cutting</option>
+								<option value="balance">balance</option>
+							</select>
+						</div>
+						<div>
+							<label htmlFor="reference">Reference</label>
+							<input id="reference" name="reference" type="text" />
+						</div>
+					</div>
+					<div className="form-actions">
+						<button type="submit" className="btn-primary">
+							Record it
+						</button>
+					</div>
 				</form>
 			</section>
 
 			{/* ── The design, on a commission ───────────────────────────────── */}
 			{order.kind === "commission" && (
-				<section>
+				<section className="panel">
 					<h2>The design</h2>
 					{order.brief && (
-						<blockquote>
+						<blockquote className="inset mb-4">
 							{/* Their own words, shown back to them during the design window. */}
 							{order.brief}
 						</blockquote>
 					)}
 
-					<form action={shareDesign}>
+					<form action={shareDesign} className="fields">
 						<input type="hidden" name="orderId" value={order.id} />
-						<label htmlFor="design-note">A note with the design</label>
-						<textarea id="design-note" name="note" rows={3} />
-						<button type="submit">Share the design</button>
+						<div>
+							<label htmlFor="design-note">A note with the design</label>
+							<textarea id="design-note" name="note" rows={3} />
+						</div>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary">
+								Share the design
+							</button>
+						</div>
 					</form>
 
 					{/*
 					 * **The piece is minted at design agreement** *(R6)*, which is when
 					 * making days become knowable and it enters the queue.
 					 */}
-					<form action={agreeDesign}>
+					<form action={agreeDesign} className="fields mt-6 border-t border-(--canvas-edge) pt-5">
 						<input type="hidden" name="orderId" value={order.id} />
-						<label htmlFor="pieceId">The piece this became</label>
-						<select id="pieceId" name="pieceId" defaultValue={order.pieceId ?? ""}>
-							<option value="">not yet</option>
-							{commissionPieces.map((piece) => (
-								<option key={piece.id} value={piece.id}>
-									{piece.name}
-								</option>
-							))}
-						</select>
-						<label htmlFor="cutting">To start the cutting</label>
-						<input id="cutting" name="cutting" type="number" />
-						<label htmlFor="balance">Balance on completion</label>
-						<input id="balance" name="balance" type="number" />
-						<button type="submit">The design is agreed</button>
+						<div>
+							<label htmlFor="pieceId">The piece this became</label>
+							<select id="pieceId" name="pieceId" defaultValue={order.pieceId ?? ""}>
+								<option value="">not yet</option>
+								{commissionPieces.map((piece) => (
+									<option key={piece.id} value={piece.id}>
+										{piece.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="fields-row">
+							<div>
+								<label htmlFor="cutting">To start the cutting</label>
+								<input id="cutting" name="cutting" type="number" />
+							</div>
+							<div>
+								<label htmlFor="balance">Balance on completion</label>
+								<input id="balance" name="balance" type="number" />
+							</div>
+						</div>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary">
+								The design is agreed
+							</button>
+						</div>
 					</form>
 				</section>
 			)}
 
 			{/* ── Fit ───────────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>Fit</h2>
 
 				{latestFit ? (
 					<>
-						<p>
+						<p className="meta mb-3">
 							{latestFit.source} · {latestFit.unit} · chart {latestFit.sizeChartVersion}
 							{latestFit.standardSize ? ` · size ${latestFit.standardSize}` : ""}
 							{latestFit.ageYears !== null ? ` · age ${latestFit.ageYears}` : ""}
@@ -412,26 +485,36 @@ export default async function OrderScreen({
 						</p>
 
 						{latestFit.redactedAt ? (
-							<p>
+							<p className="inset">
 								These numbers were erased with the customer. The order still resolves; the fit
 								record can no longer settle a dispute, which is correct.
 							</p>
 						) : (
-							<ul>
+							<ul className="rows">
 								{measurements.map((row) => (
 									<li key={row.id}>
-										{row.label}:{" "}
-										{row.value === null
-											? "—"
-											: isMeasurementKey(row.measurementKey)
-												? `${fromCanonical(row.value, latestFit.unit, row.measurementKey)} ${
-														MEASUREMENTS[row.measurementKey].unit === "g"
-															? "kg"
-															: latestFit.unit
-													}`
-												: row.value}
-										{row.warned && " · outside the usual band"}
-										{row.acknowledgedAt && " · acknowledged"}
+										<span className="meta">{row.label}</span>
+										<span className="money font-medium">
+											{row.value === null
+												? "—"
+												: isMeasurementKey(row.measurementKey)
+													? `${fromCanonical(row.value, latestFit.unit, row.measurementKey)} ${
+															MEASUREMENTS[row.measurementKey].unit === "g"
+																? "kg"
+																: latestFit.unit
+														}`
+													: row.value}
+										</span>
+										{/*
+										 * The soft guardrail's two facts, kept apart. **An
+										 * unacknowledged warning and an acknowledged one are
+										 * different facts in a dispute** *(R7)*, so they are two
+										 * marks rather than one sentence.
+										 */}
+										{row.warned && <span className="tag row-end">outside the usual band</span>}
+										{row.acknowledgedAt && (
+											<span className={`tag${row.warned ? "" : " row-end"}`}>acknowledged</span>
+										)}
 									</li>
 								))}
 							</ul>
@@ -444,104 +527,136 @@ export default async function OrderScreen({
 						 * at the second gate.
 						 */}
 						{latestFit.checkedAt ? (
-							<p>Fit checked {latestFit.checkedAt.toISOString().slice(0, 10)}.</p>
+							<p className="meta mt-3">
+								Fit checked {latestFit.checkedAt.toISOString().slice(0, 10)}.
+							</p>
 						) : (
-							<form action={checkFit}>
+							<form action={checkFit} className="form-actions">
 								<input type="hidden" name="orderId" value={order.id} />
 								<input type="hidden" name="fitRecordId" value={latestFit.id} />
-								<button type="submit">I have checked these numbers</button>
+								<button type="submit" className="btn-primary">
+									I have checked these numbers
+								</button>
 							</form>
 						)}
 					</>
 				) : (
-					<p>No numbers yet.</p>
+					<p className="meta">No numbers yet.</p>
 				)}
 
-				<details>
+				<details className="mt-4">
 					<summary>Enter a set of numbers</summary>
 					{/* Appends a new record; it never overwrites the last one *(R7)*. */}
-					<form action={recordFit}>
+					<form action={recordFit} className="fields">
 						<input type="hidden" name="orderId" value={order.id} />
 
-						<label htmlFor="garmentTypeId">Garment type</label>
-						<select id="garmentTypeId" name="garmentTypeId" defaultValue={garmentTypeId}>
-							{garmentTypes.map((type) => (
-								<option key={type.id} value={type.id}>
-									{type.name}
-								</option>
-							))}
-						</select>
+						<div>
+							<label htmlFor="garmentTypeId">Garment type</label>
+							<select id="garmentTypeId" name="garmentTypeId" defaultValue={garmentTypeId}>
+								{garmentTypes.map((type) => (
+									<option key={type.id} value={type.id}>
+										{type.name}
+									</option>
+								))}
+							</select>
+						</div>
 
-						<label htmlFor="source">Who measured</label>
-						<select id="source" name="source" defaultValue="self">
-							<option value="self">they measured themselves</option>
-							<option value="guardian">they measured someone else</option>
-							<option value="tailor">a tailor measured them</option>
-							<option value="standard">they chose a size</option>
-							<option value="ours">we measured them</option>
-						</select>
+						{/* **This answer decides liability** *(R7, R13a)*, so it gets the
+						    width rather than sharing a row. */}
+						<div>
+							<label htmlFor="source">Who measured</label>
+							<select id="source" name="source" defaultValue="self">
+								<option value="self">they measured themselves</option>
+								<option value="guardian">they measured someone else</option>
+								<option value="tailor">a tailor measured them</option>
+								<option value="standard">they chose a size</option>
+								<option value="ours">we measured them</option>
+							</select>
+						</div>
 
-						<label htmlFor="unit">Unit</label>
-						<select id="unit" name="unit" defaultValue="cm">
-							<option value="cm">cm</option>
-							<option value="in">in</option>
-						</select>
+						<div className="fields-row" style={{ "--cols": 3 } as React.CSSProperties}>
+							<div>
+								<label htmlFor="unit">Unit</label>
+								<select id="unit" name="unit" defaultValue="cm">
+									<option value="cm">cm</option>
+									<option value="in">in</option>
+								</select>
+							</div>
 
-						<label htmlFor="standardSize">Size, if they chose one</label>
-						<input id="standardSize" name="standardSize" type="text" />
+							<div>
+								<label htmlFor="standardSize">Size, if they chose one</label>
+								<input id="standardSize" name="standardSize" type="text" />
+							</div>
 
-						{/* Age as a number, never a date of birth *(R13a)*. */}
-						<label htmlFor="ageYears">Age at order, in years — kids only</label>
-						<input id="ageYears" name="ageYears" type="number" min={0} max={17} />
+							{/* Age as a number, never a date of birth *(R13a)*. */}
+							<div>
+								<label htmlFor="ageYears">Age at order, in years — kids only</label>
+								<input id="ageYears" name="ageYears" type="number" min={0} max={17} />
+							</div>
+						</div>
 
 						{typeMeasurements.length === 0 && (
-							<p>
+							<p className="inset">
 								This garment type has no measurement list yet. Settings is where it is set.
 							</p>
 						)}
 
 						{typeMeasurements.map((measurement) =>
 							isMeasurementKey(measurement.measurementKey) ? (
-								<p key={measurement.id}>
+								<div key={measurement.id} className="inset">
 									<label htmlFor={`m_${measurement.measurementKey}`}>
 										{MEASUREMENTS[measurement.measurementKey].label}
 									</label>
 									{/* The instruction ships beside the field, never in a tooltip. */}
-									<small>{MEASUREMENTS[measurement.measurementKey].instruction}</small>
+									<small className="mb-2">
+										{MEASUREMENTS[measurement.measurementKey].instruction}
+									</small>
 									<input
 										id={`m_${measurement.measurementKey}`}
 										name={`m_${measurement.measurementKey}`}
 										type="number"
 										step="0.1"
+										className="max-w-40"
 									/>
-									<label>
+									<label className="mt-2">
 										<input type="checkbox" name={`ack_${measurement.measurementKey}`} />
 										They confirmed an unusual number
 									</label>
-								</p>
+								</div>
 							) : null,
 						)}
 
-						<button type="submit">Record these numbers</button>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary">
+								Record these numbers
+							</button>
+						</div>
 					</form>
 				</details>
 			</section>
 
 			{/* ── The making ────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>The making</h2>
-				<form action={startMaking}>
-					<input type="hidden" name="orderId" value={order.id} />
-					<button type="submit">Start the making</button>
-				</form>
-				<p>
+				{/*
+				 * The sentence sits above the button rather than under it. It is the
+				 * reason the button sometimes refuses, and a reason read afterwards is
+				 * a reason nobody read.
+				 */}
+				<p className="meta mb-3">
 					The fit check is required first, and it is required on every order. Cloth is cut at the
 					second gate, so a wrong measurement found after it is unrecoverable.
 				</p>
+				<form action={startMaking}>
+					<input type="hidden" name="orderId" value={order.id} />
+					<button type="submit" className="btn-primary">
+						Start the making
+					</button>
+				</form>
 			</section>
 
 			{/* ── Photos ────────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>Photos</h2>
 				{/*
 				 * **Progress photos get one derivative at 1000 px** *(R8)* — private,
@@ -549,27 +664,38 @@ export default async function OrderScreen({
 				 * Resized on his device before they are sent, like everything else.
 				 */}
 				<PhotoUpload target={{ kind: "progress", orderId: order.id }} />
-				<ul>
+				<ul className="rows mt-3">
 					{images.map((image) => (
 						<li key={image.id}>
-							{image.kind} · {image.width}×{image.height} ·{" "}
-							{image.createdAt.toISOString().slice(0, 10)}
+							<span>{image.kind}</span>
+							<span className="meta row-end">
+								{image.width}×{image.height} · {image.createdAt.toISOString().slice(0, 10)}
+							</span>
 						</li>
 					))}
-					{images.length === 0 && <li>None yet.</li>}
+					{images.length === 0 && <li className="meta">None yet.</li>}
 				</ul>
-				<p>
+				<p className="meta mt-3">
 					These are private. They are streamed through the Worker with the order token checked,
 					never served from the public bucket.
 				</p>
 			</section>
 
 			{/* ── Maker ─────────────────────────────────────────────────────── */}
-			<section>
-				<h2>Maker</h2>
-				<form action={setMaker}>
+			<section className="panel">
+				<h2 id="maker-heading">Maker</h2>
+				{/* **A table with an FK, not a typed string** *(R16)* — the story page
+				    names and celebrates them, and a string backfills as misspellings.
+				    The picker has no label of its own and is not given a new one: it is
+				    pointed at the panel's heading, which already names it. */}
+				<form action={setMaker} className="flex flex-wrap items-end gap-2">
 					<input type="hidden" name="orderId" value={order.id} />
-					<select name="makerId" defaultValue={order.makerId ?? ""}>
+					<select
+						name="makerId"
+						defaultValue={order.makerId ?? ""}
+						aria-labelledby="maker-heading"
+						className="max-w-64"
+					>
 						<option value="">not chosen</option>
 						{makers.map((maker) => (
 							<option key={maker.id} value={maker.id}>
@@ -582,12 +708,14 @@ export default async function OrderScreen({
 			</section>
 
 			{/* ── Customer ──────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>Customer</h2>
 				{order.redactedAt ? (
-					<p>This customer asked to be forgotten. The order survives; they do not.</p>
+					<p className="inset">
+						This customer asked to be forgotten. The order survives; they do not.
+					</p>
 				) : (
-					<ul>
+					<ul className="rows">
 						<li>{order.customerName}</li>
 						<li>{order.customerPhone}</li>
 						<li>{order.customerEmail}</li>
@@ -600,51 +728,69 @@ export default async function OrderScreen({
 				 * not show it. Rotation stays one order at a time; the bulk version
 				 * does not exist and its absence is the control.
 				 */}
-				<form action={resendToken}>
-					<input type="hidden" name="orderId" value={order.id} />
-					<button type="submit">Send them their link again</button>
-				</form>
-				<form action={rotateToken}>
-					<input type="hidden" name="orderId" value={order.id} />
-					<button type="submit">Rotate the link and send the new one</button>
-				</form>
+				<div className="form-actions">
+					<form action={resendToken}>
+						<input type="hidden" name="orderId" value={order.id} />
+						<button type="submit">Send them their link again</button>
+					</form>
+					<form action={rotateToken}>
+						<input type="hidden" name="orderId" value={order.id} />
+						<button type="submit">Rotate the link and send the new one</button>
+					</form>
+				</div>
 			</section>
 
 			{/* ── Endings ───────────────────────────────────────────────────── */}
-			<section>
+			<section className="panel">
 				<h2>Endings</h2>
-				<form action={decline}>
+				{/*
+				 * Three ways an order stops, styled as endings: wine as an edge and
+				 * wine as the word, never a red box. They sit at the foot of the screen
+				 * because none of them is what he came here to do.
+				 */}
+				<form action={decline} className="fields">
 					<input type="hidden" name="orderId" value={order.id} />
-					<label htmlFor="decline-note">Why, in your words</label>
-					<textarea id="decline-note" name="note" rows={3} />
-					<button type="submit">Decline it</button>
+					<div>
+						<label htmlFor="decline-note">Why, in your words</label>
+						<textarea id="decline-note" name="note" rows={3} />
+					</div>
+					<div className="form-actions">
+						<button type="submit" className="btn-ending">
+							Decline it
+						</button>
+					</div>
 				</form>
-				<form action={lapse}>
-					<input type="hidden" name="orderId" value={order.id} />
-					<button type="submit">Mark it lapsed</button>
-				</form>
-				<form action={cancel}>
-					<input type="hidden" name="orderId" value={order.id} />
-					<button type="submit">Cancel it</button>
-				</form>
+
+				<div className="form-actions">
+					<form action={lapse}>
+						<input type="hidden" name="orderId" value={order.id} />
+						<button type="submit" className="btn-ending">
+							Mark it lapsed
+						</button>
+					</form>
+					<form action={cancel}>
+						<input type="hidden" name="orderId" value={order.id} />
+						<button type="submit" className="btn-ending">
+							Cancel it
+						</button>
+					</form>
+				</div>
 			</section>
 
 			{/* ── The log ───────────────────────────────────────────────────── */}
-			<section>
-				{/* **One panel among them, collapsed by default** *(R9c)*. */}
-				<details>
-					<summary>Everything that happened ({events.length})</summary>
-					<ol>
-						{events.map((event) => (
-							<li key={event.id}>
-								{event.at.toISOString().slice(0, 16).replace("T", " ")} · {event.type} ·{" "}
-								{event.actor}
-								{event.note ? ` · ${event.note}` : ""}
-							</li>
-						))}
-					</ol>
-				</details>
-			</section>
+			{/* **One panel among them, collapsed by default** *(R9c)*. */}
+			<details>
+				<summary>Everything that happened ({events.length})</summary>
+				<ol className="rows">
+					{events.map((event) => (
+						<li key={event.id} className="meta">
+							{event.at.toISOString().slice(0, 16).replace("T", " ")} · {event.type} ·{" "}
+							{event.actor}
+							{event.note ? ` · ${event.note}` : ""}
+						</li>
+					))}
+				</ol>
+			</details>
 		</main>
 	);
 }

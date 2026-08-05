@@ -114,31 +114,59 @@ export default async function Orders({
 		<main>
 			<h1>Orders</h1>
 
-			<p>
-				<Link href="/dashboard/orders">All</Link> ·{" "}
-				<Link href="/dashboard/orders?kind=collection">Collection</Link> ·{" "}
-				<Link href="/dashboard/orders?kind=commission">Only yours</Link>
+			{/*
+			 * **One pipeline, filtered** *(R6)* — and the filter is in the URL, so it
+			 * survives a bookmark and a link he sends himself. Which one is on is
+			 * carried by `aria-current`, the same way the four sections are.
+			 */}
+			<p className="filters">
+				<Link href="/dashboard/orders" aria-current={filter === null ? "page" : undefined}>
+					All
+				</Link>
+				<Link
+					href="/dashboard/orders?kind=collection"
+					aria-current={filter === "collection" ? "page" : undefined}
+				>
+					Collection
+				</Link>
+				<Link
+					href="/dashboard/orders?kind=commission"
+					aria-current={filter === "commission" ? "page" : undefined}
+				>
+					Only yours
+				</Link>
 			</p>
 
-			<p>
+			{/* **A number he reads, not a threshold that fires** *(R9c)*. */}
+			<p className="meta mb-4 px-1">
 				{adjusted?.count ?? 0} price{(adjusted?.count ?? 0) === 1 ? "" : "s"} adjusted in the last{" "}
 				{RECENT_DAYS} days.
 			</p>
 
-			<ul>
-				{rows.map((row) => (
-					<li key={row.id}>
-						<Link href={`/dashboard/orders/${row.id}`}>
-							{row.customerName ?? "A redacted customer"} — {row.pieceName ?? "a commission"}
-						</Link>{" "}
-						· {label(row.id, row.kind)}
-						{row.confirmedTotal !== null &&
-							` · ${formatMoney({ value: row.confirmedTotal, currency: row.currency })}`}
-						· {row.createdAt.toISOString().slice(0, 10)}
-					</li>
-				))}
-				{rows.length === 0 && <li>None yet.</li>}
-			</ul>
+			<div className="panel">
+				<ul className="rows">
+					{rows.map((row) => (
+						<li key={row.id} className="stacked">
+							<Link href={`/dashboard/orders/${row.id}`} className="link font-medium">
+								{row.customerName ?? "A redacted customer"} — {row.pieceName ?? "a commission"}
+							</Link>
+							<p className="meta mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+								<span className="tag">{label(row.id, row.kind)}</span>
+								{row.confirmedTotal !== null && (
+									<>
+										<span className="money">
+											{formatMoney({ value: row.confirmedTotal, currency: row.currency })}
+										</span>
+										<span aria-hidden="true">·</span>
+									</>
+								)}
+								{row.createdAt.toISOString().slice(0, 10)}
+							</p>
+						</li>
+					))}
+					{rows.length === 0 && <li>None yet.</li>}
+				</ul>
+			</div>
 
 			{/*
 			 * Entering one by hand. No document specified this, and it is here for a
@@ -148,62 +176,90 @@ export default async function Orders({
 			 */}
 			<details>
 				<summary>Take an order yourself</summary>
-				<form action={createOrder}>
-					<label htmlFor="name">Name</label>
-					<input id="name" name="name" type="text" required />
+				<form action={createOrder} className="fields">
+					<div>
+						<label htmlFor="name">Name</label>
+						<input id="name" name="name" type="text" required />
+					</div>
 
 					{/* **Email and phone are both required** *(R5)*. */}
-					<label htmlFor="phone">Phone</label>
-					<input id="phone" name="phone" type="tel" required />
+					<div className="fields-row">
+						<div>
+							<label htmlFor="phone">Phone</label>
+							<input id="phone" name="phone" type="tel" required />
+						</div>
 
-					<label htmlFor="email">Email</label>
-					<input id="email" name="email" type="email" required />
+						<div>
+							<label htmlFor="email">Email</label>
+							<input id="email" name="email" type="email" required />
+						</div>
+					</div>
 
-					<label htmlFor="address">Where it goes</label>
-					<input id="address" name="address" type="text" />
+					<div>
+						<label htmlFor="address">Where it goes</label>
+						<input id="address" name="address" type="text" />
+					</div>
 
-					<label htmlFor="locale">Language</label>
-					<select id="locale" name="locale" defaultValue="en">
-						<option value="en">English</option>
-						<option value="rw">Kinyarwanda</option>
-					</select>
+					<div className="fields-row">
+						<div>
+							<label htmlFor="locale">Language</label>
+							<select id="locale" name="locale" defaultValue="en">
+								<option value="en">English</option>
+								<option value="rw">Kinyarwanda</option>
+							</select>
+						</div>
 
-					{/*
-					 * **The email always fires either way** *(R11)*. This decides whether
-					 * the hand-sent WhatsApp draft is a required row in Today or an
-					 * optional one beside it.
-					 */}
-					<label htmlFor="preferredChannel">How they want to hear</label>
-					<select id="preferredChannel" name="preferredChannel" defaultValue="email">
-						<option value="email">email</option>
-						<option value="whatsapp">WhatsApp</option>
-					</select>
+						{/*
+						 * **The email always fires either way** *(R11)*. This decides whether
+						 * the hand-sent WhatsApp draft is a required row in Today or an
+						 * optional one beside it.
+						 */}
+						<div>
+							<label htmlFor="preferredChannel">How they want to hear</label>
+							<select id="preferredChannel" name="preferredChannel" defaultValue="email">
+								<option value="email">email</option>
+								<option value="whatsapp">WhatsApp</option>
+							</select>
+						</div>
+					</div>
 
-					<label htmlFor="kind">Kind</label>
-					<select id="kind" name="kind" defaultValue="collection">
-						<option value="collection">a piece from the collection</option>
-						<option value="commission">only yours</option>
-					</select>
+					<div className="fields-row">
+						<div>
+							<label htmlFor="kind">Kind</label>
+							<select id="kind" name="kind" defaultValue="collection">
+								<option value="collection">a piece from the collection</option>
+								<option value="commission">only yours</option>
+							</select>
+						</div>
 
-					<label htmlFor="new-pieceId">The piece</label>
-					<select id="new-pieceId" name="pieceId" defaultValue="">
-						<option value="">none yet — a commission</option>
-						{pieces.map((piece) => (
-							<option key={piece.id} value={piece.id}>
-								{piece.name}
-							</option>
-						))}
-						{commissionPieces.map((piece) => (
-							<option key={piece.id} value={piece.id}>
-								{piece.name} (only yours)
-							</option>
-						))}
-					</select>
+						<div>
+							<label htmlFor="new-pieceId">The piece</label>
+							<select id="new-pieceId" name="pieceId" defaultValue="">
+								<option value="">none yet — a commission</option>
+								{pieces.map((piece) => (
+									<option key={piece.id} value={piece.id}>
+										{piece.name}
+									</option>
+								))}
+								{commissionPieces.map((piece) => (
+									<option key={piece.id} value={piece.id}>
+										{piece.name} (only yours)
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
 
-					<label htmlFor="brief">Their scene, in their words</label>
-					<textarea id="brief" name="brief" rows={4} />
+					<div>
+						<label htmlFor="brief">Their scene, in their words</label>
+						<textarea id="brief" name="brief" rows={4} />
+					</div>
 
-					<button type="submit">Create the order</button>
+					<div className="form-actions">
+						<button type="submit" className="btn-primary">
+							Create the order
+						</button>
+					</div>
 				</form>
 			</details>
 		</main>
