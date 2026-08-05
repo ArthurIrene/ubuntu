@@ -364,16 +364,23 @@
 	background: var(--desk);
 }
 
+/*
+ * The border turns wine on focus — **and the ring from `globals.css` is left
+ * alone to draw on top of it.**
+ *
+ * There is no `outline: none` here, and the first draft of this file had one.
+ * That is the bug this rule exists to not have: these declarations are
+ * unlayered, `globals.css` sets the focus ring inside `@layer base`, and an
+ * unlayered `outline: none` silently wins over it — leaving a colour change as
+ * the only focus indicator on a tool that has to be completable by keyboard. A
+ * colour change alone is not a focus indicator; the stylesheet next door says so
+ * in as many words.
+ */
 .dash input:focus,
 .dash select:focus,
 .dash textarea:focus {
 	border-color: var(--thread);
-	outline: none;
 }
-
-/* `:focus-visible` still draws the ring from `globals.css` on top — a border
-   colour alone is not a focus indicator, and this whole tool is usable by
-   keyboard. */
 .dash input::placeholder,
 .dash textarea::placeholder {
 	color: color-mix(in oklab, var(--color-ink) 42%, var(--color-cream));
