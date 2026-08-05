@@ -118,11 +118,29 @@
 	line-height: 1.5;
 }
 
-/* Supporting text under a heading or beside a field: the sentence that explains
-   what a number does. Quiet ink, never wine. */
+/*
+ * Supporting text under a heading or beside a field: the sentence that explains
+ * what a number does. Quiet ink, never wine.
+ *
+ * **`.meta` sets no `display`, deliberately**, and the first build of this file
+ * did. It is the trap the header comment describes and then walked into: these
+ * rules are unlayered, Tailwind's utilities are in `@layer utilities`, so
+ * `.dash .meta` beat `flex` on every element carrying both — the queue's row of
+ * facts rendered as `RF 45,0005 days`, with the separator collapsed and no gaps,
+ * because the line was never a flex line at all.
+ *
+ * A `<p class="meta">` is a block because a paragraph is; a `<span class="meta">`
+ * inside a row is a flex item because its parent says so. Neither needs this
+ * rule to say it. `small` is the exception and keeps its `display`, because it
+ * is inline by default and every use of it here is a sentence on its own line
+ * under a field.
+ */
+.dash small {
+	display: block;
+}
+
 .dash small,
 .dash .meta {
-	display: block;
 	font-size: 0.8125rem;
 	line-height: 1.45;
 	color: var(--ink-quiet);
