@@ -708,6 +708,114 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   THE BANDS EDITOR
+
+   The densest thing in the dashboard, and the one that makes standard sizing
+   real. **Two nested ranges, which is three bands** *(R7)*: inside plausible
+   passes silently, outside plausible but inside impossible asks a question that
+   can be acknowledged, and outside impossible is the only hard stop.
+
+   The layout is the explanation. Four numbers run left to right in the order
+   they run on a body, and the two that pass silently are held together in a
+   lighter block with the thread across its top — so *nested* is something he can
+   see before he has read a label. It stacks to one column on a phone, keeping
+   the same order, which is the order the sentence above the list describes.
+
+   Nothing here validates: the action redirects on a range that does not nest and
+   the database refuses it as well. This is what stops him entering them the wrong
+   way round in the first place.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash .band-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 1rem;
+	margin-bottom: 0.625rem;
+}
+
+.dash .band-head-controls {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-left: auto;
+}
+
+/* The position field is a two-digit number and is sized like one, so it never
+   competes with the four that matter. */
+.dash .band-order {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.dash .band-order label {
+	margin-bottom: 0;
+	white-space: nowrap;
+}
+
+.dash .band-order input {
+	width: 4.5rem;
+	min-height: 2.25rem;
+	padding: 0.25rem 0.5rem;
+}
+
+.dash .bands {
+	display: grid;
+	gap: 0.625rem;
+}
+
+.dash .band-plausible {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.625rem;
+	padding: 0.625rem;
+	background: var(--paper);
+	border: 1px solid var(--edge);
+	/* The thread, marking the band that passes without comment. A line, as
+	   everywhere else wine is used. */
+	border-top: 2px solid var(--thread);
+	border-radius: 3px;
+}
+
+/* The row inside a `.rows` list already sits on paper, so the plausible block
+   lifts the other way — onto the desk — to keep the nesting visible. */
+.dash .inset .band-plausible {
+	background: var(--field);
+}
+
+@media (min-width: 48rem) {
+	.dash .bands {
+		/* The outer two are single fields; the middle holds two. The 2fr keeps all
+		   four inputs about the same width. */
+		grid-template-columns: 1fr 2fr 1fr;
+		align-items: end;
+		gap: 0.5rem;
+	}
+
+	/*
+	 * *Save* and *Remove* on one line, without *Remove* being a second submit
+	 * button inside the form that saves.
+	 *
+	 * They are two forms and they have to be — a `<form>` cannot nest, and the
+	 * only alternatives are a button that submits a form it does not live in or a
+	 * single form with two actions. Both are behaviour; this is a corner.
+	 *
+	 * Only from 48rem up. On a phone they stack, which is what a thumb wants
+	 * anyway, and nothing is positioned against content whose height varies.
+	 */
+	.dash .band-row {
+		position: relative;
+	}
+
+	.dash .band-row .band-remove {
+		position: absolute;
+		right: 0;
+		bottom: 0.75rem;
+		margin-top: 0;
+	}
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    TABLES
 
    One table in the whole dashboard — the confirmed price breakdown — and it is a
