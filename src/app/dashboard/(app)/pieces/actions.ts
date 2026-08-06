@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDb, schema } from "@/db/client";
+import { isDuplicate } from "@/db/errors";
 import { requireSession } from "@/lib/auth";
 import { DERIVATIVES, derivativeKey } from "@/lib/image-loader";
 import { storage } from "@/lib/storage";
@@ -39,6 +40,11 @@ function id(form: FormData, field = "pieceId"): string {
 	return value;
 }
 
+// `pieces.slug` is UNIQUE and the slug is derived from the name, so the second
+// *Summer* he starts is not a rare case — it is the ordinary one, and until now
+// it was a raw 500 on the screen where he does his content. See
+// `src/db/errors.ts` for why exactly one error is caught and nothing else is.
+
 /** A slug that is a URL segment and stays one. */
 function slugify(value: string): string {
 	return (
@@ -56,42 +62,63 @@ function slugify(value: string): string {
 export async function createPiece(form: FormData): Promise<void> {
 	const db = await gate();
 	const name = text(form, "name") || "Untitled";
+	const kind = text(form, "kind") === "commission" ? "commission" : "collection";
 
-	const [piece] = await db
-		.insert(schema.pieces)
-		.values({
-			slug: slugify(name),
-			name,
-			kind: text(form, "kind") === "commission" ? "commission" : "collection",
-			garmentTypeId: text(form, "garmentTypeId"),
-			state: "draft",
-		})
-		.returning({ id: schema.pieces.id });
+	let created: { id: string } | undefined;
+	try {
+		[created] = await db
+			.insert(schema.pieces)
+			.values({
+				slug: slugify(name),
+				name,
+				kind,
+				garmentTypeId: text(form, "garmentTypeId"),
+				state: "draft",
+			})
+			.returning({ id: schema.pieces.id });
+	} catch (error) {
+		// The name slugged to one that is taken. **No slug is invented to get
+		// around it** — no `-2` suffix, no timestamp: the address of a piece on the
+		// site is his to choose, and a silently mangled one is worse than being
+		// asked. He renames, or he opens the piece that already has it.
+		if (isDuplicate(error)) {
+			redirect(`/dashboard/pieces?e=slug${kind === "commission" ? "&kind=commission" : ""}`);
+		}
+		throw error;
+	}
 
-	redirect(`/dashboard/pieces/${piece.id}`);
+	redirect(`/dashboard/pieces/${created.id}`);
 }
 
 export async function savePiece(form: FormData): Promise<void> {
 	const db = await gate();
 	const pieceId = id(form);
 
-	await db
-		.update(schema.pieces)
-		.set({
-			name: text(form, "name"),
-			slug: text(form, "slug") || slugify(text(form, "name")),
-			sceneLine: text(form, "sceneLine") || null,
-			story: text(form, "story") || null,
-			basePrice: number(form, "basePrice"),
-			makingDays: number(form, "makingDays"),
-			garmentTypeId: text(form, "garmentTypeId"),
-			// **One boolean, and the entire schema cost of Ubuntu for Nature**
-			// *(R17)*. It drives no separate query, no separate route, no second
-			// grid — resist making it more than this.
-			reborn: form.get("reborn") === "on",
-			updatedAt: new Date(),
-		})
-		.where(eq(schema.pieces.id, pieceId));
+	try {
+		await db
+			.update(schema.pieces)
+			.set({
+				name: text(form, "name"),
+				slug: text(form, "slug") || slugify(text(form, "name")),
+				sceneLine: text(form, "sceneLine") || null,
+				story: text(form, "story") || null,
+				basePrice: number(form, "basePrice"),
+				makingDays: number(form, "makingDays"),
+				garmentTypeId: text(form, "garmentTypeId"),
+				// **One boolean, and the entire schema cost of Ubuntu for Nature**
+				// *(R17)*. It drives no separate query, no separate route, no second
+				// grid — resist making it more than this.
+				reborn: form.get("reborn") === "on",
+				updatedAt: new Date(),
+			})
+			.where(eq(schema.pieces.id, pieceId));
+	} catch (error) {
+		// Another piece's slug, typed into the field. He is sent back to this
+		// piece: the rest of what he typed is not saved, and the screen he lands on
+		// is the one that shows what is still stored.
+		if (isDuplicate(error)) redirect(`/dashboard/pieces/${pieceId}?e=slug`);
+		throw error;
+	}
 
 	// Kinyarwanda, per-entity rows with a fallback chain *(R14)*. Adding a locale
 	// is inserting rows, never altering tables — and a missing story falls back

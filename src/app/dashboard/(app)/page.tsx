@@ -36,17 +36,33 @@ export default async function Today() {
 		<main>
 			<h1>Today</h1>
 
-			{total === 0 && <p>Nothing waiting on you.</p>}
+			{/*
+			 * An empty queue is the good state, not an empty screen. It gets the
+			 * panel every group gets, so *nothing waiting on you* reads as an answer
+			 * rather than as a page that failed to load.
+			 */}
+			{total === 0 && (
+				<div className="panel">
+					<p>Nothing waiting on you.</p>
+				</div>
+			)}
 
 			{queue.groups.map((group) => (
-				<section key={group.key}>
-					{/* Grouped by action, with a count per heading — *confirm a price · 3*. */}
-					<h2>
-						{group.heading} · {group.rows.length}
+				<section key={group.key} className="panel">
+					{/*
+					 * Grouped by action, with a count per heading — *confirm a price ·
+					 * 3*. The count is the thing that makes twelve items read as four
+					 * decisions, so it is set as a mark rather than as more words.
+					 */}
+					<h2 className="flex items-center gap-2">
+						{group.heading} <span className="tag tag-count">{group.rows.length}</span>
 					</h2>
-					<ul>
+					<ul className="rows">
 						{group.rows.map((row, index) => (
-							<li key={`${row.orderId}-${row.action.key}-${row.action.emailKey ?? index}`}>
+							<li
+								key={`${row.orderId}-${row.action.key}-${row.action.emailKey ?? index}`}
+								className="stacked"
+							>
 								<Row row={row} />
 							</li>
 						))}
@@ -60,7 +76,7 @@ export default async function Today() {
 			 * and this is what feeds R4's Lapsed.
 			 */}
 			{queue.waitingOnCustomers > 0 && (
-				<p>
+				<p className="meta mt-4 px-1">
 					{queue.waitingOnCustomers} waiting on{" "}
 					{queue.waitingOnCustomers === 1 ? "a customer" : "customers"}.
 				</p>
@@ -69,39 +85,55 @@ export default async function Today() {
 	);
 }
 
+/**
+ * One row: who and what, then the state, then the move.
+ *
+ * Two lines rather than one sentence of middle dots. On a 360px screen the
+ * customer and the piece are what he is looking for and they get the line; the
+ * status, the money and the age are what he checks once he has found it.
+ */
 function Row({ row }: { row: QueueRow }) {
 	return (
-		<>
-			<p>
-				<strong>{row.customerName}</strong> — {row.pieceName} · {row.statusLabel}
-				{row.amount ? ` · ${formatMoney(row.amount)}` : ""}
+		<div className="w-full">
+			<p className="font-medium">
+				<strong>{row.customerName}</strong> — {row.pieceName}
+			</p>
+
+			<p className="meta mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+				<span className="tag">{row.statusLabel}</span>
+				{row.amount ? <span className="money">{formatMoney(row.amount)}</span> : null}
+				{/* Its own item, so the gap lands on both sides of it. A separator
+				    inside a flex line has its whitespace collapsed away. */}
+				{row.amount ? <span aria-hidden="true">·</span> : null}
 				{/*
 				 * **Days-waiting is information only** *(R9a)*. It never adds a row
 				 * and never removes one; the date was the part that had to be
-				 * visible, and the age is not the rule.
+				 * visible, and the age is not the rule — so it is set as quietly as
+				 * everything else here and is never coloured by how large it is.
 				 */}
-				{" · "}
 				{row.days === 0 ? "today" : `${row.days} ${row.days === 1 ? "day" : "days"}`}
 			</p>
 
-			<Action row={row} />
+			<div className="mt-3 flex flex-wrap items-center gap-2">
+				<Action row={row} />
 
-			{/*
-			 * **Every emailing row also offers the one-tap WhatsApp version**
-			 * *(R11)* — pre-written, same wording, same link, the customer's
-			 * locale. Optional here; the `send_whatsapp` group is where it is
-			 * required and will not clear until he has sent it.
-			 *
-			 * The token is inside this href and nowhere on the screen: R12d's one
-			 * permitted exception, one token per deliberate action rather than a
-			 * table.
-			 */}
-			{row.whatsapp && row.action.key !== "send_whatsapp" && (
-				<a href={row.whatsapp} target="_blank" rel="noreferrer">
-					Send it on WhatsApp
-				</a>
-			)}
-		</>
+				{/*
+				 * **Every emailing row also offers the one-tap WhatsApp version**
+				 * *(R11)* — pre-written, same wording, same link, the customer's
+				 * locale. Optional here; the `send_whatsapp` group is where it is
+				 * required and will not clear until he has sent it.
+				 *
+				 * The token is inside this href and nowhere on the screen: R12d's one
+				 * permitted exception, one token per deliberate action rather than a
+				 * table.
+				 */}
+				{row.whatsapp && row.action.key !== "send_whatsapp" && (
+					<a href={row.whatsapp} target="_blank" rel="noreferrer" className="button btn-small">
+						Send it on WhatsApp
+					</a>
+				)}
+			</div>
+		</div>
 	);
 }
 
@@ -111,6 +143,12 @@ function Row({ row }: { row: QueueRow }) {
  * **Facts complete inline; judgements open the order** *(R9a)*. The difference
  * is not cosmetic: a judgement snapshots a breakdown and sends a number that
  * cannot be taken back, so it does not get a button on a list.
+ *
+ * The styling carries that difference rather than flattening it. A fact is a
+ * filled button — one tap, the row goes, the email fires. A judgement is an
+ * outlined link, because pressing it does not send anything: it takes him to the
+ * screen where he decides. **Neither is ever a row of them with one control at
+ * the top; there is no bulk action here and no styling for one.**
  */
 function Action({ row }: { row: QueueRow }) {
 	const order = <input type="hidden" name="orderId" value={row.orderId} />;
@@ -120,7 +158,7 @@ function Action({ row }: { row: QueueRow }) {
 		case "share_design":
 		case "start_making":
 			return (
-				<Link href={`/dashboard/orders/${row.orderId}`}>
+				<Link href={`/dashboard/orders/${row.orderId}`} className="button">
 					{row.action.key === "confirm_price"
 						? "Open the order to confirm the price"
 						: row.action.key === "share_design"
@@ -134,7 +172,9 @@ function Action({ row }: { row: QueueRow }) {
 				<form action={confirmPayment}>
 					{order}
 					<input type="hidden" name="paymentId" value={row.action.paymentId ?? ""} />
-					<button type="submit">The money landed</button>
+					<button type="submit" className="btn-primary">
+						The money landed
+					</button>
 				</form>
 			);
 
@@ -142,7 +182,9 @@ function Action({ row }: { row: QueueRow }) {
 			return (
 				<form action={markComplete}>
 					{order}
-					<button type="submit">Finished stitching</button>
+					<button type="submit" className="btn-primary">
+						Finished stitching
+					</button>
 				</form>
 			);
 
@@ -150,11 +192,15 @@ function Action({ row }: { row: QueueRow }) {
 			return (
 				// On its way is one of the four that carry his personal note *(R9d)*.
 				// Optional, and leaving it empty is still one tap.
-				<form action={markShipped}>
+				<form action={markShipped} className="w-full max-w-md">
 					{order}
 					<label htmlFor={`note-${row.orderId}`}>A note, if you want one</label>
 					<input id={`note-${row.orderId}`} name="note" type="text" />
-					<button type="submit">Posted it</button>
+					<div className="form-actions">
+						<button type="submit" className="btn-primary">
+							Posted it
+						</button>
+					</div>
 				</form>
 			);
 
@@ -162,15 +208,27 @@ function Action({ row }: { row: QueueRow }) {
 			return (
 				<form action={markDelivered}>
 					{order}
-					<button type="submit">It arrived</button>
+					<button type="submit" className="btn-primary">
+						It arrived
+					</button>
 				</form>
 			);
 
 		case "send_whatsapp":
 			return (
 				<>
+					{/*
+					 * The draft leads and the acknowledgement follows it, in that order:
+					 * this row does not clear until he has actually sent it, and marking
+					 * it sent before opening it is the one mistake the pair can make.
+					 */}
 					{row.whatsapp && (
-						<a href={row.whatsapp} target="_blank" rel="noreferrer">
+						<a
+							href={row.whatsapp}
+							target="_blank"
+							rel="noreferrer"
+							className="button btn-primary"
+						>
 							Open the WhatsApp draft
 						</a>
 					)}
@@ -187,7 +245,9 @@ function Action({ row }: { row: QueueRow }) {
 				<form action={resendMessage}>
 					{order}
 					<input type="hidden" name="emailKey" value={row.action.emailKey ?? ""} />
-					<button type="submit">Send it again</button>
+					<button type="submit" className="btn-primary">
+						Send it again
+					</button>
 				</form>
 			);
 	}

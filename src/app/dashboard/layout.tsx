@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
+import { sans } from "@/lib/fonts";
+
 import "../globals.css";
+import "./dashboard.css";
 
 /**
  * The dashboard's own root layout.
@@ -22,8 +25,19 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardRootLayout({ children }: { children: React.ReactNode }) {
+	// **Only the sans is asked for here.**
+	//
+	// `fontVariables` would carry all four faces, and three of them have no
+	// business on a data-entry screen: the serif and its italic are the shop's
+	// voice, and the script is a wordmark that does not exist yet. The variable
+	// set below is the one `--font-sans` reads, so every heading and every field
+	// in the dashboard is Instrument Sans — and nothing else is fetched.
+	//
+	// `.dash` on the body is what scopes `dashboard.css`. It is set once, here,
+	// and it covers the login screens as well as the four sections: they are the
+	// same tool, and the first thing he ever sees of it.
 	return (
-		<html lang="en">
+		<html lang="en" className={sans.variable}>
 			<head>
 				{/*
 				 * Pinnable to the home screen *(R12c)* — a manifest scoped to the
@@ -40,7 +54,7 @@ export default function DashboardRootLayout({ children }: { children: React.Reac
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 			</head>
-			<body>{children}</body>
+			<body className="dash">{children}</body>
 		</html>
 	);
 }

@@ -4,17 +4,12 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import {
-	band,
-	isMeasurementKey,
-	MEASUREMENTS,
-	RANGES_VERSION,
-	toCanonical,
-} from "@/content/measurements";
+import { band, isMeasurementKey, MEASUREMENTS, toCanonical } from "@/content/measurements";
 import { getDb, schema } from "@/db/client";
 import { requireSession } from "@/lib/auth";
 import { sendOrderEmail } from "@/lib/notify";
 import { settledBy } from "@/lib/order-state";
+import { rangesVersion } from "@/lib/ranges";
 import { mintToken } from "@/lib/token";
 
 // The order screen's actions — **the judgements** *(R9a)*.
@@ -466,8 +461,9 @@ export async function recordFit(form: FormData): Promise<void> {
 			source,
 			unit,
 			// The grouping label. **The evidence is the band values snapshotted
-			// onto each measurement row below**, not this integer.
-			sizeChartVersion: String(RANGES_VERSION),
+			// onto each measurement row below**, not this. Derived from
+			// `garment_type_measurements.updated_at` — see `src/lib/ranges.ts`.
+			sizeChartVersion: await rangesVersion(db),
 			standardSize: text(form, "standardSize") || null,
 			// **Age at the time of the order, as a number, never a date of birth**
 			// *(R13a)*. A birth date ages by itself and identifies; a number does

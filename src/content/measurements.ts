@@ -24,17 +24,21 @@
  * table that may since have been edited. That is what makes the record
  * self-contained *(R7)*, and it is why this integer can be as dumb as it is.
  *
- * Starts at 1. **The increment-on-band-edit machinery is deliberately not
- * built** — it is filed for Phase 5. Until then this is a label that groups
- * records taken under the same regime, and it gets real later.
+ * **This is the floor, not the label.** Phase 5 R4 built the
+ * increment-on-band-edit machinery that Phase 4 filed, and it derives the label
+ * from `garment_type_measurements.updated_at` rather than counting — see
+ * `src/lib/ranges.ts` for why that needed no column and no migration. This
+ * constant is what that function falls back to when no band has ever been set,
+ * and it is what every record written before it carries.
  *
  * ## Where it is stored, and why that is not a new column
  *
  * It is written into `fit_records.size_chart_version`, which is the text column
  * the schema has carried since the first migration for exactly this purpose.
- * Adding a dedicated `ranges_version` integer beside it would be a migration,
- * and **Phase 4 generates none** — the schema carries all of this from Gate 0.
- * Renaming the column to match is a Phase 5 decision, not a build step.
+ * Adding a dedicated `ranges_version` integer beside it would be a migration.
+ * **The column is deliberately not renamed either**: it is `NOT NULL`, written
+ * by two paths, and will hold exactly what its name says on the day the S/M/L/XL
+ * chart lands.
  */
 export const RANGES_VERSION = 1;
 

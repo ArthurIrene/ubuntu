@@ -20,7 +20,7 @@
 
 import { and, eq, inArray } from "drizzle-orm";
 
-import { RANGES_VERSION } from "@/content/measurements";
+import { rangesVersion } from "@/lib/ranges";
 import { getDb, schema } from "@/db/client";
 import { ageAtOrder, evaluateFit, fitSource, type FitRow } from "@/lib/fit";
 import type { Locale } from "@/lib/locale";
@@ -443,9 +443,10 @@ async function writeFit(
 			garmentTypeId,
 			source: fit.source,
 			unit: fit.unit,
-			// The grouping label, not the evidence. Starts at 1; the
-			// increment-on-band-edit machinery is Phase 5's.
-			sizeChartVersion: String(RANGES_VERSION),
+			// The grouping label, not the evidence — derived from the bands
+			// themselves, so it moves when any of them is edited and not otherwise.
+			// See `src/lib/ranges.ts`.
+			sizeChartVersion: await rangesVersion(db),
 			standardSize: fit.standardSize,
 			// **Age at the time of the order, in years, and never a date of birth**
 			// *(R13a)*. A child is never an entity: no name, no row, and this number
