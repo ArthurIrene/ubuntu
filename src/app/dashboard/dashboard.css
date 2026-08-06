@@ -152,6 +152,100 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   THE THRESHOLD — the signed-out screens
+
+   `/dashboard/login`, its password step, and the re-auth step. **They get no
+   frame at all**: no sticky bar, no four sections, nothing to navigate. There is
+   exactly one thing to do on each of them, and a nav on a screen you cannot use
+   yet is furniture in a doorway.
+
+   One centered column on the desk, the same reference `holding-page.tsx` sets
+   for signed-out — but with R4's fields and buttons inside it, because the
+   moment he is through, this has to have been the same tool. Nothing here is new
+   language; the card is `.panel` and the controls are the ones every other
+   screen uses.
+
+   `100dvh` rather than `100vh`: this is opened in a mail app's in-app browser,
+   where the chrome comes and goes and `vh` is measured against the wrong height
+   half the time.
+   ────────────────────────────────────────────────────────────────────────── */
+.dash .threshold {
+	display: flex;
+	min-height: 100dvh;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	padding: 2rem 1.25rem 3rem;
+}
+
+/*
+ * The column. 24rem is a little narrower than the panels inside the app, and
+ * deliberately: one field and one button want a shape that says *this is short*,
+ * and the same width holds at 360px with the page's own padding around it.
+ */
+.dash .threshold > * {
+	width: 100%;
+	max-width: 24rem;
+}
+
+/* The heading of each threshold card, and the sentence under it. Centred —
+   they are a sign over a door, not a form label. The fields below stay
+   left-aligned, because a centred label above a box is a worse form. */
+.dash .threshold-head {
+	margin-bottom: 1.25rem;
+	text-align: center;
+}
+
+.dash .threshold-head h1 {
+	margin-bottom: 0.375rem;
+}
+
+/*
+ * The development sign-in, and it looks like what it is.
+ *
+ * **Structurally it is already safe** — `auth.passwordOnlyOpen()` is false
+ * unless `DEV_PASSWORD_LOGIN=open` *and* the request came over plain http, so it
+ * cannot render on the deployed site and the action refuses there regardless.
+ * What this adds is only that it should never read as the way in: it sits below
+ * the card, on the desk rather than on paper, inside a dashed edge, with a
+ * button that is not the primary one. **Labelled rather than hidden**, so that
+ * seeing it anywhere unexpected is immediately alarming.
+ */
+.dash .threshold-dev {
+	margin-top: 0.5rem;
+	padding: 1rem;
+	border: 1px dashed var(--edge-strong);
+	border-radius: 4px;
+	background: transparent;
+}
+
+.dash .threshold-dev h2 {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-quiet);
+}
+
+/* The one place a fixed-width face appears: the environment variables in the
+   *not configured* message, which are literal strings he would have to type. */
+.dash code {
+	/* Tight horizontally: these are read in a sentence with commas after them,
+	   and a wide pad puts a visible gap between the name and its comma. */
+	padding: 0.05em 0.2em;
+	border-radius: 2px;
+	background: var(--desk);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.875em;
+	word-break: break-word;
+}
+
+.dash .threshold-dev code {
+	background: var(--paper);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    THE FRAME
 
    Header, main, foot. One frame every screen sits in, sticky at the top so the

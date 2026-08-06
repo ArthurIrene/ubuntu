@@ -18,43 +18,78 @@ export default async function Login({
 	const passwordOnly = await auth.passwordOnlyOpen();
 
 	return (
-		<main>
-			<h1>Ubuntu</h1>
+		<main className="threshold">
+			<div className="panel">
+				<div className="threshold-head">
+					<h1>Ubuntu</h1>
+				</div>
 
-			{out === "all" && <p>Signed out everywhere. Every session is closed, including this one.</p>}
+				{/*
+				 * The banners sit under the heading and above the form — the same
+				 * order every screen in the dashboard uses, and it keeps the `h1`
+				 * first in the document rather than behind whatever went wrong last.
+				 *
+				 * `.notice` is R4's, and none of these is `role="alert"`: every one
+				 * arrives on a fresh page load after a redirect, and an alert role on
+				 * a message that was already on screen when it opened interrupts a
+				 * screen reader for news it is about to read anyway. The quiet variant
+				 * is for the one that is not a problem.
+				 */}
+				{out === "all" && (
+					<p className="notice notice-quiet">
+						Signed out everywhere. Every session is closed, including this one.
+					</p>
+				)}
 
-			{e === "rejected" && <p>That did not work. Ask for a new link and try again.</p>}
-			{e === "undelivered" && <p>The link could not be sent. Check the mail provider.</p>}
-			{e === "unconfigured" && (
-				<p>
-					Sign-in is not configured on this deployment. <code>SUPABASE_URL</code>,{" "}
-					<code>SUPABASE_ANON_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>,{" "}
-					<code>SESSION_SECRET</code>, <code>RESEND_API_KEY</code> and <code>EMAIL_FROM</code> are
-					what it needs.
-				</p>
-			)}
+				{e === "rejected" && (
+					<p className="notice">That did not work. Ask for a new link and try again.</p>
+				)}
+				{e === "undelivered" && (
+					<p className="notice">The link could not be sent. Check the mail provider.</p>
+				)}
+				{e === "unconfigured" && (
+					<p className="notice">
+						Sign-in is not configured on this deployment. <code>SUPABASE_URL</code>,{" "}
+						<code>SUPABASE_ANON_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>,{" "}
+						<code>SESSION_SECRET</code>, <code>RESEND_API_KEY</code> and <code>EMAIL_FROM</code>{" "}
+						are what it needs.
+					</p>
+				)}
 
-			{sent ? (
-				/*
-				 * Deliberately the same sentence whether or not the address was his.
-				 * There is one account; this screen is not a place to find out which
-				 * address it uses.
-				 */
-				<p>If that address is the one, a link is on its way. It asks for your password next.</p>
-			) : (
-				<form action={requestLink} method="post">
-					<label htmlFor="email">Email</label>
-					<input
-						id="email"
-						name="email"
-						type="email"
-						required
-						autoComplete="username"
-						inputMode="email"
-					/>
-					<button type="submit">Send the link</button>
-				</form>
-			)}
+				{sent ? (
+					/*
+					 * Deliberately the same sentence whether or not the address was his.
+					 * There is one account; this screen is not a place to find out which
+					 * address it uses.
+					 *
+					 * It replaces the form rather than sitting beside it, so it is the
+					 * card's whole content and is set as such — not as a banner over a
+					 * field he has already used.
+					 */
+					<p className="text-center">
+						If that address is the one, a link is on its way. It asks for your password next.
+					</p>
+				) : (
+					<form action={requestLink} method="post" className="fields">
+						<div>
+							<label htmlFor="email">Email</label>
+							<input
+								id="email"
+								name="email"
+								type="email"
+								required
+								autoComplete="username"
+								inputMode="email"
+							/>
+						</div>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary w-full">
+								Send the link
+							</button>
+						</div>
+					</form>
+				)}
+			</div>
 
 			{/*
 			 * The development escape hatch, and it says so on the screen.
@@ -67,33 +102,45 @@ export default async function Login({
 			 * that seeing it anywhere unexpected is immediately alarming.
 			 */}
 			{passwordOnly && (
-				<section>
+				<section className="threshold-dev">
 					<h2>Development sign-in</h2>
-					<p>
+					<p className="meta mt-1 mb-3">
 						Password only, no link. This appears because <code>DEV_PASSWORD_LOGIN</code> is open
 						and this request is not over https. It never renders on the deployed site.
 					</p>
-					<form action={signInWithPassword} method="post" autoComplete="off">
-						<label htmlFor="dev-email">Email</label>
-						<input
-							id="dev-email"
-							name="email"
-							type="email"
-							required
-							autoComplete="off"
-							inputMode="email"
-						/>
-						<label htmlFor="dev-password">Password</label>
-						<input
-							id="dev-password"
-							name="password"
-							type="password"
-							required
-							autoComplete="new-password"
-							data-1p-ignore
-							data-lpignore="true"
-						/>
-						<button type="submit">Open the dashboard</button>
+					<form action={signInWithPassword} method="post" autoComplete="off" className="fields">
+						<div>
+							<label htmlFor="dev-email">Email</label>
+							<input
+								id="dev-email"
+								name="email"
+								type="email"
+								required
+								autoComplete="off"
+								inputMode="email"
+							/>
+						</div>
+						<div>
+							<label htmlFor="dev-password">Password</label>
+							<input
+								id="dev-password"
+								name="password"
+								type="password"
+								required
+								autoComplete="new-password"
+								data-1p-ignore
+								data-lpignore="true"
+							/>
+						</div>
+						{/*
+						 * **Not the primary button**, and that is the whole of this
+						 * round's change to the hatch. The filled one on this screen is
+						 * *Send the link*; this is an outlined control inside a dashed box
+						 * that says *development*. Nothing about when it renders moved.
+						 */}
+						<div className="form-actions">
+							<button type="submit">Open the dashboard</button>
+						</div>
 					</form>
 				</section>
 			)}

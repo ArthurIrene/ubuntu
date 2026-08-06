@@ -21,14 +21,31 @@ export default async function VerifyReauth({
 	const { t } = await searchParams;
 	if (!t) redirect("/dashboard/settings");
 
+	/*
+	 * **This one keeps the frame, and that is not an oversight.**
+	 *
+	 * It lives under `(app)`, so `requireSession()` runs above it: unlike the two
+	 * login screens, he is *already signed in* here and this is a step-up, not a
+	 * threshold. Lifting it out of the group to match them would take the session
+	 * gate off it, which is an auth change and not a styling one. So it takes the
+	 * threshold's card and centring inside the column the rest of the dashboard
+	 * uses, and keeps the nav — which is right, because leaving without redeeming
+	 * is a thing he is allowed to do.
+	 */
 	return (
-		<main>
-			<h1>A fresh link</h1>
-			<p>This unlocks the two addresses for ten minutes, and nothing else.</p>
-			<form action={redeemLinkAction} method="post">
-				<input type="hidden" name="t" value={t} />
-				<button type="submit">Continue</button>
-			</form>
+		<main className="mx-auto max-w-96 py-8">
+			<div className="panel">
+				<div className="threshold-head">
+					<h1>A fresh link</h1>
+					<p className="meta">This unlocks the two addresses for ten minutes, and nothing else.</p>
+				</div>
+				<form action={redeemLinkAction} method="post">
+					<input type="hidden" name="t" value={t} />
+					<button type="submit" className="btn-primary w-full">
+						Continue
+					</button>
+				</form>
+			</div>
 		</main>
 	);
 }
